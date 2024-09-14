@@ -1,140 +1,78 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use core_graphics::access::ScreenCaptureAccess;
-use std::{
-    path::PathBuf,
-    time::{Instant, SystemTime, UNIX_EPOCH},
-};
-use tauri::{AppHandle, Manager, Window, WindowEvent};
-use tokio::fs;
-use xcap::{Monitor, Window as XcapWindow};
+// #[cfg(feature = "unstable_grab")]
+use rdev::{listen, Event, EventType};
+use serde::{Deserialize, Serialize};
+// use std::sync::{atomic::AtomicUsize, Arc};
+use tauri::{Manager, WindowEvent};
 
-#[allow(clippy::default_constructed_unit_structs)]
-fn has_permission() -> bool {
-    ScreenCaptureAccess::default().preflight()
+use worksmart::AppState;
+
+#[derive(Default, Debug, Serialize, Deserialize)]
+struct Session {
+    // start_time: String,
+    // end_time: String,
+    id: u128,
+    mouse_clicks: usize,
+    keystrokes: usize,
+    media: Vec<String>,
 }
 
-#[allow(clippy::default_constructed_unit_structs)]
-fn request_permission() -> bool {
-    ScreenCaptureAccess::default().request()
-}
+pub fn create_device_query_listener(handle: tauri::AppHandle) {
+    std::thread::spawn(|| {
+        let callback = move |event: Event| {
+            match event.event_type {
+                EventType::ButtonPress(rdev::Button::Left) => {
+                    if let Err(err) = handle
+                        .state::<AppState>()
+                        .mouseclick_notifier
+                        .as_ref()
+                        .unwrap()
+                        .send(())
+                    {
+                        // print error log or send stat to server
+                        println!("Error broadcasting keystroke event: {:?}", err);
+                    }
+                    // todo: broadcase mouse click to any active subscriber
+                }
+                EventType::KeyPress(_) => {
+                    if let Err(err) = handle
+                        .state::<AppState>()
+                        .key_notifier
+                        .as_ref()
+                        .unwrap()
+                        .send(())
+                    {
+                        // print error log or send stat to server
+                        println!("Error broadcasting keystroke event: {:?}", err);
+                    }
+                }
+                _ => (),
+            };
 
-use worksmart::Result;
+            // Some(event)
+        };
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
-fn normalized(filename: &str) -> String {
-    filename
-        .replace("|", "")
-        .replace("\\", "")
-        .replace(":", "")
-        .replace("/", "")
-}
-
-#[tauri::command]
-async fn capture_screen(window: Window) {
-    // MacOs check permission
-    if !has_permission() {
-        println!("No Graphics access");
-        let granted = request_permission();
-        println!("Graphics access granted: {granted}");
-    }
-
-    let app_handle = window.app_handle();
-    let storage_path = get_storage_path(app_handle).await;
-    if storage_path.is_ok() {
-        let start = Instant::now();
-        let monitors = Monitor::all().unwrap();
-        let storage_path = storage_path.unwrap();
-        for monitor in monitors {
-            println!("Monitor: {:?}", monitor.name());
-            let image = monitor.capture_image().unwrap();
-            let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-            let img_path = storage_path.clone().join(format!(
-                "{}-{}.png",
-                timestamp.as_nanos(),
-                monitor.name(),
-            ));
-
-            let file = fs::File::create(img_path.clone()).await;
-            println!("PreSave: {:?}, Exists: {}", &img_path, file.is_ok());
-
-            if file.is_ok() {
-                println!("Save: {:?}", &img_path);
-                image.save(img_path).unwrap();
-            }
+        if let Err(error) = listen(callback) {
+            println!("Error: {:?}", error)
         }
-
-        println!("Done: {:?}", start.elapsed());
-
-        let windows = XcapWindow::all().unwrap();
-
-        let start = Instant::now();
-        for window in windows {
-            // if window.is_minimized() {
-            //     continue;
-            // }
-
-            println!(
-                "Window: {:?} {:?} {:?}",
-                window.title(),
-                (window.x(), window.y(), window.width(), window.height()),
-                (window.is_minimized(), window.is_maximized())
-            );
-
-            let image = window.capture_image().unwrap();
-            let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-            let img_path = storage_path.clone().join(format!(
-                "{}-{}.png",
-                timestamp.as_nanos(),
-                normalized(window.title()),
-            ));
-
-            let file = fs::File::create(img_path.clone()).await;
-            println!("PreSave: {:?}, Exists: {}", &img_path, file.is_ok());
-            image.save(img_path).unwrap();
-
-            // i += 1;
-        }
-        println!("Windows Done: {:?}", start.elapsed());
-    }
-}
-
-async fn get_storage_path(app_handle: AppHandle) -> Result<PathBuf> {
-    let data_path = tauri::api::path::app_data_dir(&app_handle.config()).unwrap_or_default();
-    let storage_path = data_path.join("captures");
-    let path = storage_path.to_str().unwrap();
-
-    println!("Data path: {:?}", &data_path);
-    let exists = tokio::fs::try_exists(data_path.clone().to_str().unwrap()).await?;
-    if !exists {
-        match fs::create_dir(&data_path).await {
-            Ok(()) => {}
-            Err(err) => println!("Error creating data folder: {:?}", err),
-        }
-    }
-
-    println!("Storage path: {:?}", &storage_path);
-    let exists = tokio::fs::try_exists(path).await?;
-    if !exists {
-        match fs::create_dir(&storage_path).await {
-            Ok(()) => {}
-            Err(err) => println!("Error creating storage folder: {:?}", err),
-        }
-    }
-
-    Ok(storage_path)
+    });
 }
 
 #[tokio::main]
 async fn main() {
+    let (mouseclicks_tx, _) = tokio::sync::broadcast::channel::<()>(1);
+    let (keystrokes_tx, _) = tokio::sync::broadcast::channel::<()>(1);
+
     let app = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, capture_screen])
+        .manage(AppState {
+            mouseclick_notifier: Some(mouseclicks_tx),
+            key_notifier: Some(keystrokes_tx),
+        })
+        .invoke_handler(tauri::generate_handler![
+            worksmart::commands::capture_screen
+        ])
         .on_window_event(|event| match event.event() {
             WindowEvent::Focused(focused) => {
                 if !focused {
@@ -144,11 +82,22 @@ async fn main() {
             }
             WindowEvent::CloseRequested { api, .. } => {
                 println!("close request!");
+                // if user is in session prevent close or end session first
                 event.window().hide().unwrap();
                 api.prevent_close();
             }
             _ => {}
+        })
+        .setup(|app| {
+            // attach mouse and click broadcaster/subscriber to app state
+            // only call when work is in session and close when session has ended
+            create_device_query_listener(app.handle());
+
+            Ok(())
         });
+
+    // always listen for mouse and keyboard events when window is unfocused
+    let app = app.device_event_filter(tauri::DeviceEventFilter::Always);
 
     app.run(tauri::generate_context!())
         .expect("error while running tauri application");
