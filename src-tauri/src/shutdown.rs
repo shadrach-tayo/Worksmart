@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Shutdown {
     shutdown: bool,
     notify: tokio::sync::broadcast::Receiver<()>,

@@ -1,27 +1,31 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 // import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/tauri";
 import "./App.css";
+import {
+  check_permissions,
+  record_screen,
+  request_permissions,
+  start_session,
+  stop_session,
+} from "./ipc";
 
 function App() {
-  const [_greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [hasPermission, setHasPermission] = useState(false);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  useEffect(() => {
+    const check = async () => {
+      setHasPermission(await check_permissions());
+    };
 
-  async function capture_screen() {
-    await invoke("capture_screen");
-  }
+    check();
+  }, []);
 
   return (
     <div className="container">
       <h1>Worksmart ⚡️</h1>
 
       <p>Start work session ⏰</p>
-      <form
+      {/* <form
         className="row"
         onSubmit={(e) => {
           e.preventDefault();
@@ -34,12 +38,33 @@ function App() {
           placeholder="Enter team ID..."
         />
         <button type="submit">Start session</button>
-      </form>
+      </form> */}
       <div
-        className="my-2 flex items-center justify-center"
-        style={{ margin: "8px 0" }}
+        className="my-2 flex items-center justify-between gap-3"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "5px",
+          maxWidth: "700px",
+          margin: "10px auto",
+        }}
       >
-        <button onClick={capture_screen}>Capture Screen</button>
+        {hasPermission ? (
+          <>
+            <button onClick={start_session}>Start session</button>
+            <button onClick={stop_session}>Stop session</button>
+            <button onClick={record_screen}>Record Screen</button>
+          </>
+        ) : (
+          <div>
+            <p>
+              You need to grant worksmart permissions to record and capture your
+              screens and webcam
+            </p>
+            <button onClick={request_permissions}>Request permissions</button>
+          </div>
+        )}
       </div>
     </div>
   );
