@@ -19,3 +19,7 @@ export async function start_session(): Promise<boolean> {
 export async function stop_session(): Promise<boolean> {
   return await invoke("stop_session");
 }
+
+export async function update_config() {
+  await invoke("update_config");
+}

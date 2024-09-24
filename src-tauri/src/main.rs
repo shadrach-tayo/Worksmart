@@ -19,7 +19,7 @@ use worksmart::{
     recorder::{self, gstreamer_loop},
     session::{SessionChannel, SessionState},
     state::{KeystrokeBroadCaster, MouseclickBroadCaster},
-    AppState, RecordChannel, Session, Shutdown,
+    AppState, Configuration, GeneralConfig, RecordChannel, Session, Shutdown,
 };
 
 pub fn create_device_query_listener(handle: tauri::AppHandle) {
@@ -90,6 +90,9 @@ async fn main() {
         shutdown: Arc::new(Shutdown::new(session_tx.subscribe())),
     }));
 
+    let general_config: GeneralConfig = Arc::new(Mutex::new(Configuration::default()));
+    println!("Config: {:?}", general_config.lock().unwrap().clone());
+
     let app = tauri::Builder::default()
         .manage(AppState {
             mouseclick_rx: Some(mouseclicks_broadcaster),
@@ -98,12 +101,14 @@ async fn main() {
         .manage(record_tx)
         .manage(session_tx)
         .manage(session)
+        .manage(general_config)
         .invoke_handler(tauri::generate_handler![
             commands::start_session,
             commands::stop_session,
             commands::record_screen,
             commands::request_permissions,
             commands::permissions_granted,
+            commands::update_config,
         ])
         .on_window_event(|event| {
             if let WindowEvent::CloseRequested { api, .. } = event.event() {

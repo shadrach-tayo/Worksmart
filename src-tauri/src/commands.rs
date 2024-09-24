@@ -22,9 +22,9 @@ use tokio::{fs, sync::broadcast, time};
 use xcap::{Monitor, Window as XcapWindow};
 
 use crate::{
-    gen_rand_string, get_current_datetime,
+    configuration, gen_rand_string, get_current_datetime,
     session::{SessionChannel, SessionState},
-    AppState, RecordChannel, Session, Shutdown,
+    AppState, GeneralConfig, RecordChannel, Session, Shutdown,
 };
 
 use scap::capturer::{Area, Capturer, Options, Point, Size};
@@ -81,9 +81,11 @@ pub async fn start_session(
     window: Window,
     session_rx: State<'_, SessionChannel>,
     session: State<'_, SessionState>,
+    general_config: State<'_, GeneralConfig>,
 ) -> Result<(), ()> {
     let app_handle = window.app_handle();
-    // let mut active_session = app_handle.state::<SessionState>();
+
+    println!("{:?}", general_config.lock().unwrap());
 
     *session.lock().unwrap() = Session {
         id: gen_rand_string(16),
@@ -144,7 +146,6 @@ pub async fn get_session(session: State<'_, SessionState>) -> Result<Session, ()
 #[allow(clippy::default_constructed_unit_structs)]
 #[tauri::command]
 pub fn permissions_granted() -> bool {
-    println!("Check permissions");
     ScreenCaptureAccess::default().preflight() && scap::has_permission()
 }
 
@@ -152,4 +153,23 @@ pub fn permissions_granted() -> bool {
 #[tauri::command]
 pub fn request_permissions() -> bool {
     ScreenCaptureAccess::default().request() && scap::request_permission()
+}
+
+#[tauri::command]
+pub fn update_config(general_config: State<'_, GeneralConfig>) {
+    // ideally take general config struct from client and save first
+    // then assign it as new general_config: config_state.lock().unwrap() = configuration
+
+    general_config
+        .lock()
+        .unwrap()
+        .preferences
+        .time_gap_duration_in_seconds = 1200;
+
+    configuration::save(&general_config.lock().unwrap().clone());
+
+    println!(
+        "Config Updated: {:?}",
+        general_config.lock().unwrap().clone()
+    );
 }

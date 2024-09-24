@@ -7,6 +7,7 @@ import {
   request_permissions,
   start_session,
   stop_session,
+  update_config,
 } from "./ipc";
 
 function App() {
@@ -55,6 +56,7 @@ function App() {
             <button onClick={start_session}>Start session</button>
             <button onClick={stop_session}>Stop session</button>
             <button onClick={record_screen}>Record Screen</button>
+            <button onClick={update_config}>Update config</button>
           </>
         ) : (
           <div>
