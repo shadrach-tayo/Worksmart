@@ -4,6 +4,12 @@ use chrono::Utc;
 use core_graphics::access::ScreenCaptureAccess;
 
 use gst::prelude::*;
+use nokhwa::pixel_format::RgbFormat;
+use nokhwa::utils::{
+    CameraFormat, CameraIndex, FrameFormat, RequestedFormat, RequestedFormatType, Resolution,
+};
+use nokhwa::{backends::capture::*, Camera};
+use nokhwa::{native_api_backend, pixel_format};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -21,6 +27,7 @@ use tokio::{fs, sync::broadcast, time};
 #[allow(unused_imports)]
 use xcap::{Monitor, Window as XcapWindow};
 
+use crate::data_path;
 use crate::{
     configuration, gen_rand_string, get_current_datetime,
     session::{SessionChannel, SessionState},
@@ -172,4 +179,72 @@ pub fn update_config(general_config: State<'_, GeneralConfig>) {
         "Config Updated: {:?}",
         general_config.lock().unwrap().clone()
     );
+}
+
+#[tauri::command]
+pub fn webcam_capture(general_config: State<'_, GeneralConfig>) -> Result<(), String> {
+    let config = general_config.lock().unwrap().clone();
+
+    let is_granted = nokhwa::nokhwa_check();
+    if !is_granted {
+        println!("Permission not granted: {is_granted}");
+        return Err("Permission required!".into());
+    }
+
+    let backend = native_api_backend().unwrap();
+    let devices = nokhwa::query(backend).unwrap();
+    println!("There are {} available cameras.", devices.len());
+    for device in devices {
+        println!("{device}");
+    }
+
+    // first camera in system
+    let index = CameraIndex::Index(0);
+    // request the absolute highest resolution CameraFormat that can be decoded to RGB.
+    let resolution = Resolution::new(1920, 1080);
+
+    let f_format = FrameFormat::NV12;
+    let fps = 30;
+    let camera_format = CameraFormat::new(resolution, f_format, fps);
+
+    let requested = RequestedFormat::new::<pixel_format::RgbFormat>(RequestedFormatType::Closest(
+        camera_format,
+    ));
+
+    println!("Camera {:?} Request {:?}", &index, &requested);
+    // make the camera
+    let mut camera = Camera::new(index, requested).unwrap();
+    println!(
+        "Camera created : {:?}, {:?}",
+        camera.resolution(),
+        camera.camera_format()
+    );
+    camera.open_stream().unwrap();
+
+    // get a frame
+    println!(
+        "Frame format: {:?}, camera_format: {:?}",
+        camera.frame_format(),
+        camera.camera_format()
+    );
+    let frame = camera.frame().unwrap();
+    camera.stop_stream().unwrap();
+    println!("Captured Single Frame of {}", frame.buffer().len());
+    // decode into an ImageBuffer
+    let decoded = frame.decode_image::<pixel_format::RgbFormat>().unwrap();
+    println!("Decoded Frame of {}", decoded.len());
+    // std::fs::File::create(&path).expect("Cannot not save webcam image");
+    let path = data_path().join(config.media_storage_dir.clone().join("webcam.jpeg"));
+    if let Err(err) = decoded.save(path) {
+        println!("Error saving webcam image {:?}", err);
+    }
+    // match camera.frame() {
+    //     Ok(frame) => {
+    //     }
+    //     Err(err) => {
+    //         println!("Failed to get frame: {:?}", err);
+    //     }
+    // }
+
+    Ok(())
 }

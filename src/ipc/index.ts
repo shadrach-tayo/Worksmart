@@ -23,3 +23,8 @@ export async function stop_session(): Promise<boolean> {
 export async function update_config() {
   await invoke("update_config");
 }
+
+export async function webcam_capture() {
+  const result = await invoke("webcam_capture");
+  console.log("result: ", result);
+}

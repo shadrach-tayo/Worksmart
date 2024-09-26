@@ -11,7 +11,10 @@ use tauri::{AppHandle, Manager};
 use tokio::sync::broadcast;
 use xcap::Monitor;
 
-use crate::{gen_rand_string, get_current_datetime, get_storage_path, AppState, Shutdown};
+use crate::{
+    data_path, gen_rand_string, get_current_datetime, save_to_data_path, AppState, GeneralConfig,
+    Shutdown,
+};
 
 pub type SessionChannel = tokio::sync::broadcast::Sender<()>;
 pub type SessionState = Arc<Mutex<Session>>;
@@ -78,7 +81,7 @@ impl Session {
                         match res {
                                 Ok(signal) => {
                                     is_shutdown = signal;
-                                    println!("Timecapsule Finished. Shutdown: {signal}");
+                                    println!("Timecapsule Finished. Shutdown signal received: {signal}");
                                 },
                             Err(err) => {
                                 // log error to server
@@ -96,8 +99,13 @@ impl Session {
                 }
             }
 
-            let data_path = tauri::api::path::app_data_dir(&app.config()).unwrap_or_default();
-            let storage_path = data_path.join("capsules");
+            let storage_path = data_path().join(
+                app.state::<GeneralConfig>()
+                    .lock()
+                    .unwrap()
+                    .capsule_storage_dir
+                    .clone(),
+            );
 
             tokio::spawn(async move {
                 if let Err(err) = save_capsule(time_capsule, storage_path).await {
@@ -120,9 +128,9 @@ impl Session {
     }
 }
 
-const SESSION_TIME: u16 = 30;
-const MIN_MEDIA_CAPTURE_TIME: u16 = 3;
-const MEDIA_CAPTURE_LAG: u16 = 20;
+// const SESSION_TIME: u16 = 30;
+// const MIN_MEDIA_CAPTURE_TIME: u16 = 3;
+const MEDIA_CAPTURE_LAG: u64 = 20;
 
 impl TimeCapsule {
     /// Record all activities within the time capsule
@@ -156,13 +164,6 @@ impl TimeCapsule {
                         match resp {
                             Ok(dt) => {
                                 mouseclicks.write().unwrap().push(dt.to_rfc2822());
-                                // mouseclicks.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                                println!(
-                                    "Mouse click: {} at: {}",
-                                    // mouseclicks.load(std::sync::atomic::Ordering::SeqCst),
-                                    mouseclicks.read().unwrap().len(),
-                                    dt.to_rfc2822()
-                                );
                             }
                             Err(err) => {
                                 println!("mouse click Error: {:?}", err);
@@ -184,13 +185,6 @@ impl TimeCapsule {
                         match resp {
                             Ok(dt) => {
                                 keystrokes.write().unwrap().push(dt.to_rfc2822());
-                                // keystrokes.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                                println!(
-                                    "Key stroke: {} at: {}",
-                                     keystrokes.read().unwrap().len(),
-                                    // keystrokes.load(std::sync::atomic::Ordering::SeqCst),
-                                    dt.to_rfc2822()
-                                );
                             }
                             Err(err) => {
                                 println!("keystroke receiver error: {:?}", err);
@@ -202,41 +196,56 @@ impl TimeCapsule {
             println!("keystroke is shutdown");
         };
 
-        let storage_path = get_storage_path(&app_handle).unwrap();
+        let storage_path = data_path().join(
+            app_handle
+                .state::<GeneralConfig>()
+                .lock()
+                .unwrap()
+                .media_storage_dir
+                .clone(),
+        );
 
-        let max_delay_based_on_capture_lag = SESSION_TIME - MEDIA_CAPTURE_LAG;
+        let time_gap_in_secs = app_handle
+            .state::<GeneralConfig>()
+            .lock()
+            .unwrap()
+            .preferences
+            .time_gap_duration_in_seconds;
+        let max_delay_based_on_capture_lag = time_gap_in_secs - MEDIA_CAPTURE_LAG;
+        let min_capture_start_time = time_gap_in_secs / 10;
         let delay = {
             let mut gen = thread_rng();
-            gen.gen_range(MIN_MEDIA_CAPTURE_TIME..=max_delay_based_on_capture_lag)
+            gen.gen_range(min_capture_start_time..=max_delay_based_on_capture_lag)
         };
 
         let screenshots = Arc::clone(&self.media);
+        let capsule_id = self.id.clone();
         let media_capture_task = tokio::spawn(async move {
             println!("Media capture scheduled to run at: {delay} seconds");
             tokio::time::sleep(Duration::from_secs(delay as u64)).await;
 
             let monitors = Monitor::all().unwrap();
-            // let storage_path = storage_path.unwrap();
             for monitor in monitors {
-                // println!("Monitor: {:?}", monitor.name());
                 let image = monitor.capture_image().unwrap();
                 let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-                let img_path = storage_path.clone().join(format!(
-                    "{}-{}.png",
+                let img_path = storage_path.join(format!(
+                    "{}-{}-{}.png",
+                    capsule_id,
                     timestamp.as_nanos(),
                     monitor.name(),
                 ));
 
                 let file = tokio::fs::File::create(img_path.clone()).await;
-                // println!("PreSave: {:?}, Exists: {}", &img_path, file.is_ok());
 
                 if file.is_ok() {
-                    // println!("Save: {:?}", &img_path);
                     image.save(&img_path).unwrap();
                     screenshots
                         .write()
                         .unwrap()
                         .push(img_path.to_str().unwrap().to_owned());
+                } else {
+                    // save to error log and stream to server later
+                    println!("Error saving screenshot to dir: {:?}", img_path);
                 }
             }
 
@@ -280,13 +289,13 @@ impl TimeCapsule {
             // println!("Windows Capture Done: {:?}", start.elapsed());
 
             tokio::time::sleep(Duration::from_secs(
-                (SESSION_TIME - max_delay_based_on_capture_lag) as u64,
+                time_gap_in_secs - max_delay_based_on_capture_lag,
             ))
             .await;
             // }
         });
 
-        let timeout = tokio::spawn(tokio::time::sleep(Duration::from_secs(SESSION_TIME as u64)));
+        let timeout = tokio::spawn(tokio::time::sleep(Duration::from_secs(time_gap_in_secs)));
 
         let mouseclick_task = tokio::spawn(listen_for_mouse_clicks);
         let keystroke_task = tokio::spawn(listen_for_keystrokes);
@@ -315,12 +324,6 @@ impl TimeCapsule {
         drop(notify_end);
 
         println!("Session ended {}", self.id);
-        // println!(
-        //     "Mouse clicks: {}, keys strokes: {}",
-        //     self.mouse_clicks.load(std::sync::atomic::Ordering::SeqCst),
-        //     self.keystrokes.load(std::sync::atomic::Ordering::SeqCst),
-        // );
-
         self.ended_at = Some(get_current_datetime().to_rfc2822());
         Ok(shutdown_signal_received)
     }
@@ -347,27 +350,20 @@ async fn save_capsule(time_capsule: TimeCapsule, storage_path: PathBuf) -> crate
         keystrokes: keystrokes.read().unwrap().clone(),
     };
 
-    let capsule = serde_json::to_string(&value)?;
-
-    // let data_path = tauri::api::path::app_data_dir(&app_handle.config()).unwrap_or_default();
-    // let storage_path = data_path.join("timecapsules");
     let path = storage_path.to_str().unwrap();
 
     let exists = std::fs::metadata(path).map_or(false, |_| true);
-    println!("Exits: {:?}", exists);
     if !exists {
         match std::fs::create_dir(&storage_path) {
             Ok(()) => {}
-            Err(err) => println!("Error creating storage folder: {:?}", err),
+            Err(err) => {
+                println!("Error creating storage folder: {:?}", err);
+                panic!("Could not create storage directory")
+            }
         }
     }
 
-    let file = std::fs::File::create(storage_path.join(format!("{}.json", value.id)))?;
-    if let Err(err) = serde_json::to_writer(&file, &capsule) {
-        println!("Error saving session: {} :: {:?}", value.id, err);
-    }
-
-    println!("Session {} saved", value.id);
+    save_to_data_path(&value, storage_path.join(format!("{}.json", value.id)));
 
     Ok(())
 }

@@ -78,6 +78,10 @@ async fn main() {
     let gst_registry = gst::Registry::get();
     gst_registry.scan_path(std::env::current_exe().unwrap().parent().unwrap());
 
+    nokhwa::nokhwa_initialize(|granted| {
+        println!("Camera permission granted: {granted}");
+    });
+
     let (record_tx, mut record_rx): (RecordChannel, _) = tauri::async_runtime::channel(100);
 
     let (session_tx, _): (SessionChannel, _) = tokio::sync::broadcast::channel(1);
@@ -109,6 +113,7 @@ async fn main() {
             commands::request_permissions,
             commands::permissions_granted,
             commands::update_config,
+            commands::webcam_capture,
         ])
         .on_window_event(|event| {
             if let WindowEvent::CloseRequested { api, .. } = event.event() {

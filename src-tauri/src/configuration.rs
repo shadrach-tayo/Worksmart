@@ -15,7 +15,7 @@ fn config_path<D>() -> PathBuf {
 
     std::fs::create_dir_all(&config_path).expect("Can't create config directory");
 
-    config_path.join(format!("{}.json", std::any::type_name::<D>()).replace("::", "-"))
+    config_path.join(format!("{}.bin", std::any::type_name::<D>()).replace("::", "-"))
 }
 
 pub fn data_path() -> PathBuf {
@@ -32,6 +32,14 @@ where
 {
     let data: Vec<u8> = bincode::serialize(data).unwrap();
     std::fs::write(config_path::<D>(), data).expect("Can't save app configuration");
+}
+
+pub fn save_to_data_path<D>(data: &D, dir: PathBuf)
+where
+    D: Serialize,
+{
+    let data: Vec<u8> = bincode::serialize(data).unwrap();
+    std::fs::write(data_path().join(dir), data).expect("Can't save app configuration");
 }
 
 pub fn load<D>() -> crate::Result<D>

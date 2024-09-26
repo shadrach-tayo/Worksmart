@@ -8,6 +8,7 @@ import {
   start_session,
   stop_session,
   update_config,
+  webcam_capture,
 } from "./ipc";
 
 function App() {
@@ -57,6 +58,7 @@ function App() {
             <button onClick={stop_session}>Stop session</button>
             <button onClick={record_screen}>Record Screen</button>
             <button onClick={update_config}>Update config</button>
+            <button onClick={webcam_capture}>Take Webcam shot</button>
           </>
         ) : (
           <div>
