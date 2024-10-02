@@ -3,6 +3,7 @@
 use chrono::Utc;
 use core_graphics::access::ScreenCaptureAccess;
 
+use dcv_color_primitives::convert_image;
 use gst::prelude::*;
 use nokhwa::pixel_format::RgbFormat;
 use nokhwa::utils::{
@@ -203,13 +204,13 @@ pub fn webcam_capture(general_config: State<'_, GeneralConfig>) -> Result<(), St
     // request the absolute highest resolution CameraFormat that can be decoded to RGB.
     let resolution = Resolution::new(1920, 1080);
 
-    let f_format = FrameFormat::NV12;
+    let f_format = FrameFormat::YUYV;
     let fps = 30;
     let camera_format = CameraFormat::new(resolution, f_format, fps);
 
-    let requested = RequestedFormat::new::<pixel_format::RgbFormat>(RequestedFormatType::Closest(
-        camera_format,
-    ));
+    let requested = RequestedFormat::new::<pixel_format::RgbFormat>(
+        RequestedFormatType::AbsoluteHighestResolution,
+    );
 
     println!("Camera {:?} Request {:?}", &index, &requested);
     // make the camera
@@ -230,6 +231,37 @@ pub fn webcam_capture(general_config: State<'_, GeneralConfig>) -> Result<(), St
     let frame = camera.frame().unwrap();
     camera.stop_stream().unwrap();
     println!("Captured Single Frame of {}", frame.buffer().len());
+
+    let WIDTH = frame.resolution().width();
+    let HEIGHT = frame.resolution().height();
+
+    let src_data = Box::new(frame.buffer());
+    let mut dst_data = Box::new([0u8; 4096]);
+
+    let src_format = dcv_color_primitives::ImageFormat {
+        pixel_format: dcv_color_primitives::PixelFormat::I422,
+        color_space: dcv_color_primitives::ColorSpace::Rgb,
+        num_planes: 1,
+    };
+
+    let dst_format = dcv_color_primitives::ImageFormat {
+        pixel_format: dcv_color_primitives::PixelFormat::Rgba,
+        color_space: dcv_color_primitives::ColorSpace::Rgb,
+        num_planes: 1,
+    };
+
+    let result = convert_image(
+        WIDTH,
+        HEIGHT,
+        &src_format,
+        None,
+        &[&*src_data],
+        &dst_format,
+        None,
+        &mut [&mut *dst_data],
+    );
+    println!("Conversion done: {:?}", result);
+
     // decode into an ImageBuffer
     let decoded = frame.decode_image::<pixel_format::RgbFormat>().unwrap();
     println!("Decoded Frame of {}", decoded.len());
@@ -239,8 +271,7 @@ pub fn webcam_capture(general_config: State<'_, GeneralConfig>) -> Result<(), St
         println!("Error saving webcam image {:?}", err);
     }
     // match camera.frame() {
-    //     Ok(frame) => {
-    //     }
+    //     Ok(frame) => {}
     //     Err(err) => {
     //         println!("Failed to get frame: {:?}", err);
     //     }

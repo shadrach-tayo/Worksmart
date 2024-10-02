@@ -32,10 +32,11 @@ iana-time-zone = "0.1.61"
 directories = "5.0"
 bincode = "1.3.3"
 
-nokhwa = { version = "0.10.4", features = [
+nokhwa = { version = "0.10.3", features = [
     "input-native",
     "output-threaded",
-], git = "https://github.com/kendfrey/nokhwa.git", branch = "0.10" }
+], git = "https://github.com/CapSoftware/nokhwa.git", branch = "brendonovich-fork" }
+dcv-color-primitives = "0.6.1"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
