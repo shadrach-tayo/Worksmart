@@ -12,7 +12,7 @@ use gst::prelude::*;
 use scap::capturer::{Area, Capturer, Options, Point, Size};
 
 use rdev::{listen, Event, EventType};
-use tauri::{Manager, WindowEvent};
+use tauri::{AppHandle, Manager, WindowEvent};
 
 use worksmart::{
     commands, gen_rand_string, get_current_datetime, get_storage_path,
@@ -59,6 +59,26 @@ pub fn create_device_query_listener(handle: tauri::AppHandle) {
             println!("Error: {:?}", error)
         }
     });
+}
+
+pub fn open_auth_window(app: &AppHandle) -> Result<(), String> {
+    if let Some(auth_window) = app.get_window("login") {
+        auth_window.show().unwrap();
+        // auth_window.close().unwrap();
+        return Ok(());
+    }
+
+    // let window = tauri::WindowBuilder::new(app, "login", tauri::WindowUrl::App("/login".into()))
+    //     .center()
+    //     .title("Login".to_string())
+    //     .hidden_title(false)
+    //     .title_bar_style(tauri::TitleBarStyle::Overlay)
+    //     // .inner_size(1048f64, 650f64)
+    //     .build()
+    //     .map_err(|_| "Failed to create auth window")?;
+    // window.show().unwrap();
+
+    Ok(())
 }
 
 #[tokio::main]
@@ -124,6 +144,8 @@ async fn main() {
             }
         })
         .setup(|app| {
+            open_auth_window(&app.app_handle());
+
             // attach mouse and click broadcaster/subscriber to app state
             // only call when work is in session and close when session has ended
             create_device_query_listener(app.handle());

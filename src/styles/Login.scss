@@ -1,0 +1,103 @@
+// Import all of Bootstrap's CSS
+@import "~bootstrap/scss/bootstrap";
+
+$primary-color: #6246ea;
+$hover-color: #503dbb;
+$background-color: #000;
+$modal-background-color: #1c1c1e;
+$border-color: #736c93;
+$text-color: #c7c4d4;
+$btn-text-hover-color: $text-color;
+
+html {
+    margin: 0;
+    background: $modal-background-color;
+    border-radius: 10px;
+}
+body {
+    margin: 0;
+    background: $modal-background-color;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+
+    .wrapper {
+        height: 100%;
+        width: 100%;
+
+        .login-modal {
+            background-color: $modal-background-color;
+            border-radius: 10px;
+            padding: 27px 46px;
+            width: 400px;
+            max-width: 100%;
+            /* box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.5); */
+            color: $text-color;
+            position: relative;
+
+            h2 {
+                font-size: 20px;
+                font-weight: 700;
+                margin-bottom: 50px;
+            }
+
+            .btn-close-custom {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                color: #888;
+                font-size: 18px;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+            }
+
+            .form-control {
+                background-color: transparent;
+                border: none;
+                outline: 1px solid $border-color;
+
+                &:focus {
+                    background-color: transparent;
+                    color: #fff;
+                    outline: 1px solid $border-color;
+                }
+            }
+
+            .form-check-input {
+                background-color: #444;
+                border-color: #555;
+            }
+
+            .btn-primary-custom {
+                color: $text-color;
+                background-color: $primary-color;
+                padding: 15px 0;
+                border: none;
+                border-radius: 50px;
+                width: 100%;
+                transition: background-color 0.3s ease;
+
+                &:hover {
+                    color: $btn-text-hover-color;
+                    background-color: $hover-color;
+                }
+            }
+
+            .text-muted {
+                &:hover {
+                    text-decoration: underline;
+                }
+            }
+        }
+    }
+}
+
+.drag-region {
+    padding: 20px;
+    background-color: $modal-background-color;
+}
