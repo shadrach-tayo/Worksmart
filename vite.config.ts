@@ -1,11 +1,18 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import sass from "sass";
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
     plugins: [react()],
-
+    css: {
+        preprocessorOptions: {
+            scss: {
+                implementation: sass,
+            },
+        },
+    },
     // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
     //
     // 1. prevent vite from obscuring rust errors

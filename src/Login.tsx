@@ -6,9 +6,9 @@ const Login = () => {
         <div data-tauri-drag-region className="drag-region">
             <div className="wrapper">
                 <div className="login-modal">
-                    {/* <button className="btn-close-custom" aria-label="Close">
+                    <button className="btn-close-custom" aria-label="Close">
                         ×
-                    </button> */}
+                    </button>
                     <img src={reactLogo} style={{ marginBottom: "35px" }} />
                     <form>
                         <div className="mb-3">
@@ -35,7 +35,7 @@ const Login = () => {
                                 required
                             />
                         </div>
-                        <div className="d-flex justify-content-between align-items-center mb-3">
+                        {/* <div className="d-flex justify-content-between align-items-center mb-3">
                             <div className="form-check">
                                 <input
                                     type="checkbox"
@@ -52,7 +52,7 @@ const Login = () => {
                             <a href="#" className="text-muted">
                                 Forgot password?
                             </a>
-                        </div>
+                        </div> */}
                         <button
                             type="submit"
                             className="btn btn-primary-custom"

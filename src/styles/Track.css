@@ -1,0 +1,108 @@
+body {
+    color: #e1e1e1;
+    background: transparent;
+}
+
+.wrapper {
+    /* position: absolute;
+    top: 30px;
+    right: 30px; */
+}
+
+.tracker-card {
+    background-color: #121117;
+    border-radius: 10px;
+    padding: 24px 32px;
+    min-width: 463px;
+    color: #c7c4d4;
+    position: relative;
+}
+
+.tracker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tracker-header h2 {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.tracker-header .tab-control {
+    display: flex;
+    gap: 20px;
+}
+
+.tracker-header i {
+    font-size: 16px;
+}
+
+.divider {
+    border: 0.5px solid #5c5775;
+}
+
+.tracker-details {
+    display: flex;
+    align-items: start;
+    gap: 12px;
+}
+
+.tracker-details .bi-circle-fill {
+    font-size: 12px;
+    color: #3cbd0f;
+}
+
+.tracker-details h4 {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 9px;
+}
+
+.tracker-details h5 {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.status-circle {
+    width: 12px;
+    height: 12px;
+    background-color: #34c759;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.stop-button {
+    background-color: transparent;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: grid;
+    place-items: center;
+    border: solid 6px #34c759;
+    padding: 0;
+}
+
+.stop-button .bi-square-fill {
+    font-size: 15px;
+    color: #34c759;
+}
+
+.tracker-menu {
+    position: absolute;
+    bottom: -40px;
+    right: 20px;
+    background-color: #121117;
+    border-radius: 0 0 10px 10px;
+    padding: 0 45px 10px;
+    display: flex;
+    align-items: center;
+    gap: 21px;
+}
+
+.tracker-menu i {
+    font-size: 21px;
+    color: #c7c4d4;
+    cursor: pointer;
+}

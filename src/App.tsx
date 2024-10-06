@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 // import reactLogo from "./assets/react.svg";
-import "./App.scss";
+import "./App.css";
 import {
     check_permissions,
     record_screen,

@@ -64,7 +64,6 @@ pub fn create_device_query_listener(handle: tauri::AppHandle) {
 pub fn open_auth_window(app: &AppHandle) -> Result<(), String> {
     if let Some(auth_window) = app.get_window("login") {
         auth_window.show().unwrap();
-        // auth_window.close().unwrap();
         return Ok(());
     }
 
@@ -144,7 +143,7 @@ async fn main() {
             }
         })
         .setup(|app| {
-            open_auth_window(&app.app_handle());
+            // open_auth_window(&app.app_handle());
 
             // attach mouse and click broadcaster/subscriber to app state
             // only call when work is in session and close when session has ended

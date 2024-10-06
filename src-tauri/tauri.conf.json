@@ -25,7 +25,8 @@
                 "title": "Worksmart",
                 "width": 600,
                 "height": 300,
-                "resizable": false
+                "resizable": false,
+                "visible": false
             },
             {
                 "label": "login",
@@ -39,8 +40,53 @@
                 "transparent": false,
                 "alwaysOnTop": false,
                 "contentProtected": true,
-                "visible": false,
+                "visible": true,
                 "url": "/login"
+            },
+            {
+                "label": "settings",
+                "fullscreen": false,
+                "resizable": false,
+                "maximizable": false,
+                "title": "Settings",
+                "decorations": false,
+                "transparent": true,
+                "alwaysOnTop": false,
+                "contentProtected": true,
+                "visible": true,
+                "url": "/settings",
+                "width": 460,
+                "height": 620
+            },
+            {
+                "label": "timecard",
+                "fullscreen": false,
+                "resizable": false,
+                "maximizable": false,
+                "title": "Timecard",
+                "decorations": false,
+                "transparent": true,
+                "alwaysOnTop": false,
+                "contentProtected": true,
+                "visible": true,
+                "url": "/timecard",
+                "width": 503,
+                "height": 233
+            },
+            {
+                "label": "track",
+                "fullscreen": false,
+                "resizable": false,
+                "maximizable": false,
+                "title": "Track",
+                "decorations": false,
+                "transparent": true,
+                "alwaysOnTop": false,
+                "contentProtected": true,
+                "visible": true,
+                "url": "/track",
+                "width": 463,
+                "height": 220
             }
         ],
         "security": {
