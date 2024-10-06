@@ -1,10 +1,16 @@
 import "./styles/Track.css";
-import { X, Minus, ChartPie, Settings, Square } from "lucide-react";
+import {
+    X,
+    Minus,
+    ChartPie,
+    Settings,
+    Square,
+    Circle,
+    Play,
+} from "lucide-react";
 
 const Track = () => {
     return (
-        // <div className="drag-region">
-        // <div className="wrapper">
         <div data-tauri-drag-region className="tracker-card">
             <div className="d-flex flex-column gap-3">
                 <div className="tracker-header">
@@ -19,15 +25,18 @@ const Track = () => {
                 <div className="divider"></div>
                 <div className="d-flex justify-content-between">
                     <div className="tracker-details">
-                        <i className="bi bi-circle-fill"></i>
+                        {/* <i className="bi bi-circle-fill"></i> */}
+                        <Circle fill="#3cbd0f" stroke="transparent" size={14} />
                         <div>
-                            <h4>Daniel Hermers</h4>
+                            <h4>Shadrach Tayo</h4>
                             <h5>3h 50m</h5>
                         </div>
                     </div>
-                    <button className="stop-button">
-                        {/* <i className="bi bi-square-fill"></i> */}
-                        <Square fill="#3cbd0f" stroke="transparent" />
+                    <button className="action-button start-button">
+                        <Play fill="#3cbd0f" stroke="transparent" />
+                    </button>
+                    <button className="action-button stop-button">
+                        <Square fill="red" stroke="transparent" />
                     </button>
                 </div>
             </div>
@@ -36,8 +45,6 @@ const Track = () => {
                 <ChartPie />
             </div>
         </div>
-        //     </div>
-        // </div>
     );
 };
 
