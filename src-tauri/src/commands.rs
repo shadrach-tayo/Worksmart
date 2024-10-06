@@ -28,7 +28,8 @@ use tokio::{fs, sync::broadcast, time};
 #[allow(unused_imports)]
 use xcap::{Monitor, Window as XcapWindow};
 
-use crate::data_path;
+use crate::{storage, windows, Auth, AuthConfig};
+
 use crate::{
     configuration, gen_rand_string, get_current_datetime,
     session::{SessionChannel, SessionState},
@@ -174,7 +175,7 @@ pub fn update_config(general_config: State<'_, GeneralConfig>) {
         .preferences
         .time_gap_duration_in_seconds = 1200;
 
-    configuration::save(&general_config.lock().unwrap().clone());
+    storage::save(&general_config.lock().unwrap().clone());
 
     println!(
         "Config Updated: {:?}",
@@ -202,11 +203,11 @@ pub fn webcam_capture(general_config: State<'_, GeneralConfig>) -> Result<(), St
     // first camera in system
     let index = CameraIndex::Index(0);
     // request the absolute highest resolution CameraFormat that can be decoded to RGB.
-    let resolution = Resolution::new(1920, 1080);
+    // let resolution = Resolution::new(1920, 1080);
 
-    let f_format = FrameFormat::YUYV;
-    let fps = 30;
-    let camera_format = CameraFormat::new(resolution, f_format, fps);
+    // let f_format = FrameFormat::YUYV;
+    // let fps = 30;
+    // let camera_format = CameraFormat::new(resolution, f_format, fps);
 
     let requested = RequestedFormat::new::<pixel_format::RgbFormat>(
         RequestedFormatType::AbsoluteHighestResolution,
@@ -232,7 +233,9 @@ pub fn webcam_capture(general_config: State<'_, GeneralConfig>) -> Result<(), St
     camera.stop_stream().unwrap();
     println!("Captured Single Frame of {}", frame.buffer().len());
 
+    #[allow(non_snake_case)]
     let WIDTH = frame.resolution().width();
+    #[allow(non_snake_case)]
     let HEIGHT = frame.resolution().height();
 
     let src_data = Box::new(frame.buffer());
@@ -255,6 +258,7 @@ pub fn webcam_capture(general_config: State<'_, GeneralConfig>) -> Result<(), St
         HEIGHT,
         &src_format,
         None,
+        #[allow(clippy::needless_borrow)]
         &[&*src_data],
         &dst_format,
         None,
@@ -266,7 +270,7 @@ pub fn webcam_capture(general_config: State<'_, GeneralConfig>) -> Result<(), St
     let decoded = frame.decode_image::<pixel_format::RgbFormat>().unwrap();
     println!("Decoded Frame of {}", decoded.len());
     // std::fs::File::create(&path).expect("Cannot not save webcam image");
-    let path = data_path().join(config.media_storage_dir.clone().join("webcam.jpeg"));
+    let path = storage::data_path().join(config.media_storage_dir.clone().join("webcam.jpeg"));
     if let Err(err) = decoded.save(path) {
         println!("Error saving webcam image {:?}", err);
     }
@@ -276,6 +280,24 @@ pub fn webcam_capture(general_config: State<'_, GeneralConfig>) -> Result<(), St
     //         println!("Failed to get frame: {:?}", err);
     //     }
     // }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn login(
+    auth_config: State<'_, AuthConfig>,
+    window: Window,
+    payload: Auth,
+) -> Result<(), String> {
+    println!("Login: {:?}", &payload);
+    let handle = window.app_handle();
+    windows::close_login(&handle).map_err(|err| err.to_string())?;
+
+    *auth_config.lock().unwrap() = Some(payload.clone());
+    storage::save_to_path(&payload, storage::auth_path::<Auth>()).map_err(|err| err.to_string())?;
+
+    windows::show_tracker(&handle).map_err(|err| err.to_string())?;
 
     Ok(())
 }

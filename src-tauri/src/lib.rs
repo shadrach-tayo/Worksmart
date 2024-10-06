@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod commands;
 pub mod configuration;
 pub mod error;
@@ -7,7 +8,9 @@ pub mod shutdown;
 pub mod state;
 pub mod storage;
 pub mod utils;
+pub mod windows;
 
+pub use auth::*;
 pub use commands::{record_screen, start_session, stop_session};
 pub use configuration::*;
 pub use error::{Error, Result};
@@ -15,5 +18,6 @@ pub use recorder::{RecordChannel, RecordCommand};
 pub use session::Session;
 pub use shutdown::Shutdown;
 pub use state::AppState;
-pub use storage::get_storage_path;
+pub use storage::{auth_path, config_path, get_storage_path, load, save, save_to_data_path};
 pub use utils::*;
+pub use windows::*;

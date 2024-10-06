@@ -37,10 +37,9 @@
                 "width": 420,
                 "height": 420,
                 "decorations": false,
-                "transparent": false,
                 "alwaysOnTop": false,
                 "contentProtected": true,
-                "visible": true,
+                "visible": false,
                 "url": "/login"
             },
             {
@@ -50,10 +49,9 @@
                 "maximizable": false,
                 "title": "Settings",
                 "decorations": false,
-                "transparent": true,
                 "alwaysOnTop": false,
                 "contentProtected": true,
-                "visible": true,
+                "visible": false,
                 "url": "/settings",
                 "width": 460,
                 "height": 620
@@ -65,10 +63,9 @@
                 "maximizable": false,
                 "title": "Timecard",
                 "decorations": false,
-                "transparent": true,
                 "alwaysOnTop": false,
                 "contentProtected": true,
-                "visible": true,
+                "visible": false,
                 "url": "/timecard",
                 "width": 503,
                 "height": 233
@@ -80,10 +77,9 @@
                 "maximizable": false,
                 "title": "Track",
                 "decorations": false,
-                "transparent": true,
                 "alwaysOnTop": false,
                 "contentProtected": true,
-                "visible": true,
+                "visible": false,
                 "url": "/track",
                 "width": 463,
                 "height": 220

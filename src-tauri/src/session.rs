@@ -11,10 +11,7 @@ use tauri::{AppHandle, Manager};
 use tokio::sync::broadcast;
 use xcap::Monitor;
 
-use crate::{
-    data_path, gen_rand_string, get_current_datetime, save_to_data_path, AppState, GeneralConfig,
-    Shutdown,
-};
+use crate::{gen_rand_string, get_current_datetime, storage, AppState, GeneralConfig, Shutdown};
 
 pub type SessionChannel = tokio::sync::broadcast::Sender<()>;
 pub type SessionState = Arc<Mutex<Session>>;
@@ -99,7 +96,7 @@ impl Session {
                 }
             }
 
-            let storage_path = data_path().join(
+            let storage_path = storage::data_path().join(
                 app.state::<GeneralConfig>()
                     .lock()
                     .unwrap()
@@ -196,7 +193,7 @@ impl TimeCapsule {
             println!("keystroke is shutdown");
         };
 
-        let storage_path = data_path().join(
+        let storage_path = storage::data_path().join(
             app_handle
                 .state::<GeneralConfig>()
                 .lock()
@@ -363,7 +360,7 @@ async fn save_capsule(time_capsule: TimeCapsule, storage_path: PathBuf) -> crate
         }
     }
 
-    save_to_data_path(&value, storage_path.join(format!("{}.json", value.id)));
+    storage::save_to_data_path(&value, storage_path.join(format!("{}.json", value.id)));
 
     Ok(())
 }

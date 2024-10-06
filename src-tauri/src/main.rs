@@ -12,14 +12,15 @@ use gst::prelude::*;
 use scap::capturer::{Area, Capturer, Options, Point, Size};
 
 use rdev::{listen, Event, EventType};
-use tauri::{AppHandle, Manager, WindowEvent};
+use tauri::{Manager, WindowEvent};
 
 use worksmart::{
     commands, gen_rand_string, get_current_datetime, get_storage_path,
     recorder::{self, gstreamer_loop},
     session::{SessionChannel, SessionState},
     state::{KeystrokeBroadCaster, MouseclickBroadCaster},
-    AppState, Configuration, GeneralConfig, RecordChannel, Session, Shutdown,
+    windows, AppState, Auth, AuthConfig, Configuration, GeneralConfig, RecordChannel, Session,
+    Shutdown,
 };
 
 pub fn create_device_query_listener(handle: tauri::AppHandle) {
@@ -61,25 +62,6 @@ pub fn create_device_query_listener(handle: tauri::AppHandle) {
     });
 }
 
-pub fn open_auth_window(app: &AppHandle) -> Result<(), String> {
-    if let Some(auth_window) = app.get_window("login") {
-        auth_window.show().unwrap();
-        return Ok(());
-    }
-
-    // let window = tauri::WindowBuilder::new(app, "login", tauri::WindowUrl::App("/login".into()))
-    //     .center()
-    //     .title("Login".to_string())
-    //     .hidden_title(false)
-    //     .title_bar_style(tauri::TitleBarStyle::Overlay)
-    //     // .inner_size(1048f64, 650f64)
-    //     .build()
-    //     .map_err(|_| "Failed to create auth window")?;
-    // window.show().unwrap();
-
-    Ok(())
-}
-
 #[tokio::main]
 async fn main() {
     std::panic::set_hook(Box::new(|info| {
@@ -116,6 +98,18 @@ async fn main() {
     let general_config: GeneralConfig = Arc::new(Mutex::new(Configuration::default()));
     println!("Config: {:?}", general_config.lock().unwrap().clone());
 
+    let auth_config = {
+        let auth = Auth::default();
+
+        if auth.name.is_empty() {
+            None
+        } else {
+            Some(auth)
+        }
+    };
+
+    let auth_config: AuthConfig = Arc::new(Mutex::new(auth_config));
+
     let app = tauri::Builder::default()
         .manage(AppState {
             mouseclick_rx: Some(mouseclicks_broadcaster),
@@ -125,6 +119,7 @@ async fn main() {
         .manage(session_tx)
         .manage(session)
         .manage(general_config)
+        .manage(auth_config)
         .invoke_handler(tauri::generate_handler![
             commands::start_session,
             commands::stop_session,
@@ -133,6 +128,7 @@ async fn main() {
             commands::permissions_granted,
             commands::update_config,
             commands::webcam_capture,
+            commands::login
         ])
         .on_window_event(|event| {
             if let WindowEvent::CloseRequested { api, .. } = event.event() {
@@ -143,7 +139,11 @@ async fn main() {
             }
         })
         .setup(|app| {
-            // open_auth_window(&app.app_handle());
+            if app.app_handle().state::<AuthConfig>().lock().unwrap().is_none() {
+                windows::show_login(&app.app_handle()).unwrap();
+            } else {
+                windows::show_tracker(&app.app_handle()).unwrap()
+            }
 
             // attach mouse and click broadcaster/subscriber to app state
             // only call when work is in session and close when session has ended

@@ -1,7 +1,18 @@
 import "./styles/Login.scss";
 import reactLogo from "./assets/react.svg";
+import { FormEventHandler } from "react";
+import { login } from "./ipc";
 
 const Login = () => {
+    const onSubmit: FormEventHandler = async (evt) => {
+        evt.preventDefault();
+        const form = evt.target as HTMLFormElement;
+        var formData = new FormData(form);
+        // output as an object
+        console.log(formData.get("email"), formData.get("password"));
+        await login();
+    };
+
     return (
         <div data-tauri-drag-region className="drag-region">
             <div className="wrapper">
@@ -10,13 +21,14 @@ const Login = () => {
                         ×
                     </button>
                     <img src={reactLogo} style={{ marginBottom: "35px" }} />
-                    <form>
+                    <form onSubmit={onSubmit}>
                         <div className="mb-3">
                             <label htmlFor="email" className="form-label">
                                 Email
                             </label>
                             <input
                                 type="email"
+                                name="email"
                                 className="form-control"
                                 id="email"
                                 placeholder="Email"
@@ -29,6 +41,7 @@ const Login = () => {
                             </label>
                             <input
                                 type="password"
+                                name="password"
                                 className="form-control"
                                 id="password"
                                 placeholder="Password"
