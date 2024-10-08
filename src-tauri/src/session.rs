@@ -23,6 +23,7 @@ pub struct Session {
     pub id: String,
     pub started_at: Option<String>,
     pub ended_at: Option<String>,
+    pub is_running: bool,
     pub notify_shutdown: broadcast::Sender<()>,
     pub shutdown: Arc<Shutdown>,
 }
@@ -320,7 +321,7 @@ impl TimeCapsule {
         // send drop signals
         drop(notify_end);
 
-        println!("Session ended {}", self.id);
+        println!("Time capsule ended {}", self.id);
         self.ended_at = Some(get_current_datetime().to_rfc2822());
         Ok(shutdown_signal_received)
     }

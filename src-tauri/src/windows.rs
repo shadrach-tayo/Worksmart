@@ -71,3 +71,21 @@ pub fn close_timecard(app: &AppHandle) -> crate::Result<()> {
 
     Ok(())
 }
+
+pub fn show_window(app: &AppHandle, name: String) -> crate::Result<()> {
+    if let Some(window) = app.get_window(&name) {
+        window.show().unwrap();
+        return Ok(());
+    }
+
+    Ok(())
+}
+
+pub fn hide_window(app: &AppHandle, name: String) -> crate::Result<()> {
+    if let Some(window) = app.get_window(&name) {
+        window.close().unwrap();
+        return Ok(());
+    }
+
+    Ok(())
+}

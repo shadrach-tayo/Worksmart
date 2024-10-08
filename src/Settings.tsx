@@ -1,23 +1,63 @@
+import { FormEventHandler, useEffect, useState } from "react";
+import { get_preferences, hide_window, set_preferences } from "./ipc";
 import "./styles/Settings.css"; // Assuming styles are moved to a separate CSS file named Settings.css
+import { Configuration } from "./types";
 
 const Settings = () => {
+    const [preferences, setPreferences] = useState<Configuration>();
+
+    const getPreferences = async () => {
+        setPreferences(await get_preferences());
+    };
+
+    useEffect(() => {
+        getPreferences();
+    }, []);
+
+    console.log("Preferences", preferences);
+
+    const onSubmit: FormEventHandler = async (evt) => {
+        evt.preventDefault();
+        let form = evt?.target as HTMLFormElement;
+
+        const config = {
+            ...preferences,
+            launch_on_startup: form["launchOnStartup"].checked, //  === "on" ? true : false
+            signin_on_launch: form["signInOnStartup"].checked, //  === "on" ? true : false
+            track_on_signin: form["trackOnSignin"].checked, //  === "on" ? true : false
+            enable_camera: form["enableCamera"].checked, //  === "on" ? true : false
+        } as Configuration;
+        console.log("values", config);
+        await set_preferences(config);
+        setPreferences(config);
+    };
+
     return (
         <div data-tauri-drag-region className="settings-card p-4">
             <h3 className="mb-4">Settings</h3>
             <hr />
-            <form>
+            <form onSubmit={onSubmit}>
                 <div className="row">
                     <div className="col-12 col-md-6">
                         <div className="mb-3 form-check">
                             <input
                                 type="checkbox"
                                 className="form-check-input"
-                                id="startupCheck"
-                                defaultChecked
+                                id="launchOnStartup"
+                                name="launchOnStartup"
+                                checked={
+                                    preferences?.launch_on_startup ?? false
+                                }
+                                onChange={(evt) =>
+                                    setPreferences({
+                                        ...(preferences as Configuration),
+                                        launch_on_startup: evt.target.checked,
+                                    })
+                                }
                             />
                             <label
                                 className="form-check-label"
-                                htmlFor="startupCheck"
+                                htmlFor="launchOnStartup"
                             >
                                 Launch at system startup
                             </label>
@@ -27,11 +67,19 @@ const Settings = () => {
                             <input
                                 type="checkbox"
                                 className="form-check-input"
-                                id="signinCheck"
+                                id="signInOnStartup"
+                                name="signInOnStartup"
+                                checked={preferences?.signin_on_launch ?? false}
+                                onChange={(evt) =>
+                                    setPreferences({
+                                        ...(preferences as Configuration),
+                                        signin_on_launch: evt.target.checked,
+                                    })
+                                }
                             />
                             <label
                                 className="form-check-label"
-                                htmlFor="signinCheck"
+                                htmlFor="signInOnStartup"
                             >
                                 Sign in on launch
                             </label>
@@ -41,12 +89,19 @@ const Settings = () => {
                             <input
                                 type="checkbox"
                                 className="form-check-input"
-                                id="trackSigninCheck"
-                                defaultChecked
+                                id="trackOnSignin"
+                                name="trackOnSignin"
+                                checked={preferences?.track_on_signin ?? false}
+                                onChange={(evt) =>
+                                    setPreferences({
+                                        ...(preferences as Configuration),
+                                        track_on_signin: evt.target.checked,
+                                    })
+                                }
                             />
                             <label
                                 className="form-check-label"
-                                htmlFor="trackSigninCheck"
+                                htmlFor="trackOnSignin"
                             >
                                 Start tracking on sign in
                             </label>
@@ -71,12 +126,21 @@ const Settings = () => {
                                 <input
                                     type="checkbox"
                                     className="form-check-input"
-                                    id="enableCameraCheck"
-                                    defaultChecked
+                                    id="enableCamera"
+                                    name="enableCamera"
+                                    checked={
+                                        preferences?.enable_camera ?? false
+                                    }
+                                    onChange={(evt) =>
+                                        setPreferences({
+                                            ...(preferences as Configuration),
+                                            enable_camera: evt.target.checked,
+                                        })
+                                    }
                                 />
                                 <label
                                     className="form-check-label"
-                                    htmlFor="enableCameraCheck"
+                                    htmlFor="enableCamera"
                                 >
                                     Enable Camera
                                 </label>
@@ -121,6 +185,7 @@ const Settings = () => {
                             <button
                                 type="button"
                                 className="btn btn-outline-light"
+                                onClick={() => hide_window("settings")}
                             >
                                 Cancel
                             </button>

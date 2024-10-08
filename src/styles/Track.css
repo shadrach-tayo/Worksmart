@@ -120,3 +120,24 @@ body {
     color: #c7c4d4;
     cursor: pointer;
 }
+
+.icon-btn {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+}
+
+.icon-btn:hover {
+    outline: none;
+    background-color: transparent;
+}
+
+.icon-btn:hover > svg {
+    stroke: #3cbd0f;
+}
+
+.icon-btn:disabled:hover > svg {
+    stroke: gray;
+}

@@ -12,6 +12,10 @@ use crate::storage;
 pub struct Configuration {
     pub capsule_storage_dir: PathBuf,
     pub media_storage_dir: PathBuf,
+    pub launch_on_startup: bool,
+    pub signin_on_launch: bool,
+    pub track_on_signin: bool,
+    pub enable_camera: bool,
     pub preferences: Preferences,
 }
 
@@ -24,6 +28,10 @@ impl Default for Configuration {
         let this = Self {
             capsule_storage_dir: PathBuf::from_str("capsules").unwrap(),
             media_storage_dir: PathBuf::from_str("media").unwrap(),
+            launch_on_startup: false,
+            signin_on_launch: false,
+            track_on_signin: false,
+            enable_camera: false,
             preferences: Preferences::default(),
         };
 

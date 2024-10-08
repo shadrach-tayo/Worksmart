@@ -15,7 +15,7 @@ body {
     align-items: stretch;
 }
 
-button {
+.timecard > button {
     background-color: transparent;
     height: auto;
     padding: 0 29px;

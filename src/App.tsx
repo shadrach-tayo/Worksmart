@@ -27,20 +27,7 @@ function App() {
             <h1>Worksmart ⚡️</h1>
 
             <p>Start work session ⏰</p>
-            {/* <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter team ID..."
-        />
-        <button type="submit">Start session</button>
-      </form> */}
+
             <div
                 className="my-2 flex items-center justify-between gap-3"
                 style={{

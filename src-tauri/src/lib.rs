@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod autostart;
 pub mod commands;
 pub mod configuration;
 pub mod error;
@@ -11,6 +12,7 @@ pub mod utils;
 pub mod windows;
 
 pub use auth::*;
+pub use autostart::*;
 pub use commands::{record_screen, start_session, stop_session};
 pub use configuration::*;
 pub use error::{Error, Result};

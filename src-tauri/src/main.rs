@@ -15,7 +15,7 @@ use rdev::{listen, Event, EventType};
 use tauri::{Manager, WindowEvent};
 
 use worksmart::{
-    commands, gen_rand_string, get_current_datetime, get_storage_path,
+    autostart, commands, gen_rand_string, get_current_datetime, get_storage_path,
     recorder::{self, gstreamer_loop},
     session::{SessionChannel, SessionState},
     state::{KeystrokeBroadCaster, MouseclickBroadCaster},
@@ -91,6 +91,7 @@ async fn main() {
         id: gen_rand_string(16),
         started_at: None,
         ended_at: None,
+        is_running: false,
         notify_shutdown: session_tx.clone(),
         shutdown: Arc::new(Shutdown::new(session_tx.subscribe())),
     }));
@@ -123,12 +124,18 @@ async fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::start_session,
             commands::stop_session,
+            commands::get_session,
             commands::record_screen,
             commands::request_permissions,
             commands::permissions_granted,
-            commands::update_config,
+            commands::set_preferences,
+            commands::get_preferences,
             commands::webcam_capture,
-            commands::login
+            commands::login,
+            commands::get_auth,
+            commands::show_window,
+            commands::hide_window,
+            commands::minimize_window,
         ])
         .on_window_event(|event| {
             if let WindowEvent::CloseRequested { api, .. } = event.event() {
@@ -377,6 +384,23 @@ async fn main() {
                     }
                 }
             });
+
+
+            // autostart by default on debug mode (debug build)
+            let is_debug_mode = cfg!(debug_assertions);
+
+            // Enable app auto launch
+            let autostart = autostart::update(!is_debug_mode);
+            if autostart.is_ok() {
+                println!(
+                    "Auto start {}",
+                    if !is_debug_mode {
+                        "enabled"
+                    } else {
+                        "disabled"
+                    }
+                );
+            }
 
             Ok(())
         });

@@ -28,7 +28,7 @@ use tokio::{fs, sync::broadcast, time};
 #[allow(unused_imports)]
 use xcap::{Monitor, Window as XcapWindow};
 
-use crate::{storage, windows, Auth, AuthConfig};
+use crate::{storage, windows, Auth, AuthConfig, Configuration};
 
 use crate::{
     configuration, gen_rand_string, get_current_datetime,
@@ -85,20 +85,36 @@ fn normalized(filename: &str) -> String {
         .replace("/", "")
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionDetail {
+    pub id: String,
+    pub started_at: String,
+    pub ended_at: Option<String>,
+}
+
 #[tauri::command]
 pub async fn start_session(
     window: Window,
     session_rx: State<'_, SessionChannel>,
     session: State<'_, SessionState>,
     general_config: State<'_, GeneralConfig>,
-) -> Result<(), ()> {
+) -> Result<Option<SessionDetail>, ()> {
+    let sesh = session.lock().unwrap().clone();
+    if sesh.is_running {
+        return Ok(None);
+    }
+
     let app_handle = window.app_handle();
 
     println!("{:?}", general_config.lock().unwrap());
 
+    let id = gen_rand_string(16);
+    let started_at = get_current_datetime().to_rfc2822();
+
     *session.lock().unwrap() = Session {
-        id: gen_rand_string(16),
-        started_at: Some(get_current_datetime().to_rfc2822()),
+        id: id.clone(),
+        started_at: Some(started_at.clone()),
+        is_running: true,
         ended_at: None,
         notify_shutdown: session_rx.inner().to_owned(),
         shutdown: Arc::new(Shutdown::new(session_rx.subscribe())),
@@ -116,25 +132,30 @@ pub async fn start_session(
     // drop(session);
 
     println!("Lock dropped");
-    Ok(())
+    Ok(Some(SessionDetail {
+        id,
+        started_at,
+        ended_at: None,
+    }))
 }
 
 #[tauri::command]
-pub async fn stop_session(window: Window, session_rx: State<'_, SessionChannel>) -> Result<(), ()> {
+pub async fn stop_session(
+    window: Window,
+    session: State<'_, SessionState>,
+    session_rx: State<'_, SessionChannel>,
+) -> Result<(), ()> {
+    if !session.lock().unwrap().is_running {
+        return Ok(());
+    }
+
     let app_handle = window.app_handle();
 
-    if app_handle
-        .state::<SessionState>()
-        .lock()
-        .unwrap()
-        .started_at
-        .is_some()
-    {
-        session_rx.send(()).unwrap();
-        std::thread::yield_now();
-        app_handle.state::<SessionState>().lock().unwrap().ended_at =
-            Some(get_current_datetime().to_rfc2822());
-    }
+    session_rx.send(()).unwrap();
+    // std::thread::yield_now();
+    session.lock().unwrap().ended_at = Some(get_current_datetime().to_rfc2822());
+    // session.lock().unwrap().ended_at = Some(get_current_datetime().to_rfc2822());
+    session.lock().unwrap().is_running = false;
 
     let state = app_handle.state::<SessionState>().lock().unwrap().clone();
 
@@ -148,8 +169,22 @@ pub async fn stop_session(window: Window, session_rx: State<'_, SessionChannel>)
 }
 
 #[tauri::command]
-pub async fn get_session(session: State<'_, SessionState>) -> Result<Session, ()> {
-    Ok(session.lock().unwrap().clone())
+pub async fn get_session(session: State<'_, SessionState>) -> Result<Option<SessionDetail>, ()> {
+    if session.lock().unwrap().started_at.is_none() {
+        return Ok(None);
+    }
+
+    let Session {
+        id,
+        started_at,
+        ended_at,
+        ..
+    } = session.lock().unwrap().clone();
+    Ok(Some(SessionDetail {
+        id,
+        ended_at,
+        started_at: started_at.unwrap(),
+    }))
 }
 
 #[allow(clippy::default_constructed_unit_structs)]
@@ -165,15 +200,11 @@ pub fn request_permissions() -> bool {
 }
 
 #[tauri::command]
-pub fn update_config(general_config: State<'_, GeneralConfig>) {
-    // ideally take general config struct from client and save first
-    // then assign it as new general_config: config_state.lock().unwrap() = configuration
-
-    general_config
-        .lock()
-        .unwrap()
-        .preferences
-        .time_gap_duration_in_seconds = 1200;
+pub fn set_preferences(
+    general_config: State<'_, GeneralConfig>,
+    preferences: Configuration,
+) -> Result<(), String> {
+    *general_config.lock().unwrap() = preferences;
 
     storage::save(&general_config.lock().unwrap().clone());
 
@@ -181,6 +212,29 @@ pub fn update_config(general_config: State<'_, GeneralConfig>) {
         "Config Updated: {:?}",
         general_config.lock().unwrap().clone()
     );
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_preferences(general_config: State<'_, GeneralConfig>) -> Result<Configuration, String> {
+    let config = general_config.lock().unwrap().clone();
+
+    println!("Get Config: {:?}", &config);
+
+    Ok(config)
+}
+
+#[tauri::command]
+pub fn get_auth(auth_config: State<'_, AuthConfig>) -> Result<Option<Auth>, String> {
+    // ideally take general config struct from client and save first
+    // then assign it as new general_config: config_state.lock().unwrap() = configuration
+
+    let auth = auth_config.lock().unwrap().clone();
+
+    println!("Get auth: {:?}", &auth);
+
+    Ok(auth)
 }
 
 #[tauri::command]
@@ -298,6 +352,47 @@ pub fn login(
     storage::save_to_path(&payload, storage::auth_path::<Auth>()).map_err(|err| err.to_string())?;
 
     windows::show_tracker(&handle).map_err(|err| err.to_string())?;
+
+    Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShowWindowPayload {
+    pub name: String,
+}
+
+#[tauri::command]
+pub fn show_window(window: Window, name: String) -> Result<(), String> {
+    if let Some(window) = window.app_handle().get_window(&name) {
+        window
+            .show()
+            .map_err(|err| format!("Error showing window: {err}"))?;
+        return Ok(());
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn hide_window(window: Window, name: String) -> Result<(), String> {
+    if let Some(window) = window.app_handle().get_window(&name) {
+        window
+            .hide()
+            .map_err(|err| format!("Error closing window: {err}"))?;
+        return Ok(());
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn minimize_window(window: Window, name: String) -> Result<(), String> {
+    if let Some(window) = window.app_handle().get_window(&name) {
+        window
+            .minimize()
+            .map_err(|err| format!("Error minimizing window: {err}"))?;
+        return Ok(());
+    }
 
     Ok(())
 }
