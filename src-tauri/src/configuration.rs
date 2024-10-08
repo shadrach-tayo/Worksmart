@@ -4,6 +4,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use nokhwa::utils::CameraInfo;
 use serde::{Deserialize, Serialize};
 
 use crate::storage;
@@ -55,3 +56,5 @@ impl Default for Preferences {
 }
 
 pub type GeneralConfig = Arc<Mutex<Configuration>>;
+
+pub type SelectedDevice = Arc<Mutex<CameraInfo>>;

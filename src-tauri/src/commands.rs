@@ -7,7 +7,8 @@ use dcv_color_primitives::convert_image;
 use gst::prelude::*;
 use nokhwa::pixel_format::RgbFormat;
 use nokhwa::utils::{
-    CameraFormat, CameraIndex, FrameFormat, RequestedFormat, RequestedFormatType, Resolution,
+    CameraFormat, CameraIndex, CameraInfo, FrameFormat, RequestedFormat, RequestedFormatType,
+    Resolution,
 };
 use nokhwa::{backends::capture::*, Camera};
 use nokhwa::{native_api_backend, pixel_format};
@@ -28,7 +29,7 @@ use tokio::{fs, sync::broadcast, time};
 #[allow(unused_imports)]
 use xcap::{Monitor, Window as XcapWindow};
 
-use crate::{storage, windows, Auth, AuthConfig, Configuration};
+use crate::{storage, windows, Auth, AuthConfig, Configuration, SelectedDevice};
 
 use crate::{
     configuration, gen_rand_string, get_current_datetime,
@@ -208,19 +209,12 @@ pub fn set_preferences(
 
     storage::save(&general_config.lock().unwrap().clone());
 
-    println!(
-        "Config Updated: {:?}",
-        general_config.lock().unwrap().clone()
-    );
-
     Ok(())
 }
 
 #[tauri::command]
 pub fn get_preferences(general_config: State<'_, GeneralConfig>) -> Result<Configuration, String> {
     let config = general_config.lock().unwrap().clone();
-
-    println!("Get Config: {:?}", &config);
 
     Ok(config)
 }
@@ -395,4 +389,48 @@ pub fn minimize_window(window: Window, name: String) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn list_camera_devices() -> Result<Vec<String>, String> {
+    let backend = native_api_backend().unwrap();
+    let devices = nokhwa::query(backend).map_err(|err| {
+        println!("nokhwa::query(backend) error: {:?}", err);
+        format!("Error listing camera devices: {:?}", err)
+    })?;
+    // println!(
+    //     "[list_camera_devices] {:?}",
+    //     devices
+    //         .clone()
+    //         .into_iter()
+    //         .map(|camera| camera.human_name())
+    //         .collect::<Vec<String>>()
+    // );
+    Ok(devices.iter().map(|camera| camera.human_name()).collect())
+}
+
+#[tauri::command]
+pub fn select_camera_device(selected_device: State<'_, SelectedDevice>, name: String) {
+    let backend = native_api_backend().unwrap();
+    match nokhwa::query(backend) {
+        Ok(devices) => {
+            let mut devices = devices;
+            devices.retain(|camera| camera.human_name() == name.as_str());
+
+            #[allow(clippy::get_first)]
+            let camera: CameraInfo = devices.get(0).unwrap().to_owned();
+            // println!("Selected device: {:?}", camera);
+            *selected_device.lock().unwrap() = camera;
+        }
+        Err(err) => {
+            println!("nokhwa::query(backend) error: {:?}", err);
+        }
+    };
+}
+
+#[tauri::command]
+pub fn get_selected_camera_device(
+    selected_device: State<'_, SelectedDevice>,
+) -> Result<CameraInfo, String> {
+    Ok(selected_device.lock().unwrap().clone())
 }

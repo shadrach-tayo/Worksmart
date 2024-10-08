@@ -1,17 +1,44 @@
-import { FormEventHandler, useEffect, useState } from "react";
-import { get_preferences, hide_window, set_preferences } from "./ipc";
+import {
+    ChangeEventHandler,
+    FormEventHandler,
+    useEffect,
+    useState,
+} from "react";
+import {
+    get_preferences,
+    hide_window,
+    list_camera_devices,
+    select_camera_device,
+    set_preferences,
+} from "./ipc";
 import "./styles/Settings.css"; // Assuming styles are moved to a separate CSS file named Settings.css
 import { Configuration } from "./types";
 
+let mockDevices = ["FaceTime HD Camera", "Logitech Webcam", "External Camera"];
+
 const Settings = () => {
     const [preferences, setPreferences] = useState<Configuration>();
+    const [cameraDevices, setCameraDevices] = useState<string[]>(
+        () => mockDevices,
+    );
+    const [selectedDevice, setSelectedDevices] = useState<string>(
+        () => mockDevices[0],
+    );
 
     const getPreferences = async () => {
         setPreferences(await get_preferences());
     };
 
+    const getDevices = async () => {
+        let devices = await list_camera_devices();
+        console.log("devices", devices);
+        setCameraDevices(devices);
+        setSelectedDevices(devices[0]);
+    };
+
     useEffect(() => {
         getPreferences();
+        getDevices();
     }, []);
 
     console.log("Preferences", preferences);
@@ -22,14 +49,22 @@ const Settings = () => {
 
         const config = {
             ...preferences,
-            launch_on_startup: form["launchOnStartup"].checked, //  === "on" ? true : false
-            signin_on_launch: form["signInOnStartup"].checked, //  === "on" ? true : false
-            track_on_signin: form["trackOnSignin"].checked, //  === "on" ? true : false
-            enable_camera: form["enableCamera"].checked, //  === "on" ? true : false
+            launch_on_startup: form["launchOnStartup"].checked,
+            signin_on_launch: form["signInOnStartup"].checked,
+            track_on_signin: form["trackOnSignin"].checked,
+            enable_camera: form["enableCamera"].checked,
         } as Configuration;
         console.log("values", config);
         await set_preferences(config);
         setPreferences(config);
+    };
+
+    const onDeviceSelectionChange: ChangeEventHandler<
+        HTMLSelectElement
+    > = async (evt) => {
+        evt.preventDefault();
+        console.log("Selection changed", evt.target.value);
+        select_camera_device(evt.target.value);
     };
 
     return (
@@ -152,10 +187,22 @@ const Settings = () => {
                             >
                                 Camera Driver
                             </label>
-                            <select className="form-select" id="cameraDriver">
-                                <option selected>FaceTime HD Camera</option>
+                            <select
+                                className="form-select"
+                                id="cameraDriver"
+                                defaultValue={selectedDevice}
+                                onChange={onDeviceSelectionChange}
+                            >
+                                {cameraDevices.map((device) => (
+                                    <option
+                                        selected={device === selectedDevice}
+                                    >
+                                        {device}
+                                    </option>
+                                ))}
+                                {/* <option selected>FaceTime HD Camera</option>
                                 <option>Logitech Webcam</option>
-                                <option>External Camera</option>
+                                <option>External Camera</option> */}
                             </select>
                         </div>
 

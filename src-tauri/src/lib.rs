@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod autostart;
+pub mod camera;
 pub mod commands;
 pub mod configuration;
 pub mod error;
@@ -13,6 +14,7 @@ pub mod windows;
 
 pub use auth::*;
 pub use autostart::*;
+pub use camera::*;
 pub use commands::{record_screen, start_session, stop_session};
 pub use configuration::*;
 pub use error::{Error, Result};

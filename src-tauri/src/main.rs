@@ -15,12 +15,13 @@ use rdev::{listen, Event, EventType};
 use tauri::{Manager, WindowEvent};
 
 use worksmart::{
-    autostart, commands, gen_rand_string, get_current_datetime, get_storage_path,
+    autostart, commands, gen_rand_string, get_current_datetime, get_default_camera,
+    get_storage_path,
     recorder::{self, gstreamer_loop},
     session::{SessionChannel, SessionState},
     state::{KeystrokeBroadCaster, MouseclickBroadCaster},
-    windows, AppState, Auth, AuthConfig, Configuration, GeneralConfig, RecordChannel, Session,
-    Shutdown,
+    windows, AppState, Auth, AuthConfig, Configuration, GeneralConfig, RecordChannel,
+    SelectedDevice, Session, Shutdown,
 };
 
 pub fn create_device_query_listener(handle: tauri::AppHandle) {
@@ -111,6 +112,8 @@ async fn main() {
 
     let auth_config: AuthConfig = Arc::new(Mutex::new(auth_config));
 
+    let selected_device: SelectedDevice = Arc::new(Mutex::new(get_default_camera().unwrap()));
+
     let app = tauri::Builder::default()
         .manage(AppState {
             mouseclick_rx: Some(mouseclicks_broadcaster),
@@ -121,6 +124,7 @@ async fn main() {
         .manage(session)
         .manage(general_config)
         .manage(auth_config)
+        .manage(selected_device)
         .invoke_handler(tauri::generate_handler![
             commands::start_session,
             commands::stop_session,
@@ -136,6 +140,8 @@ async fn main() {
             commands::show_window,
             commands::hide_window,
             commands::minimize_window,
+            commands::list_camera_devices,
+            commands::select_camera_device,
         ])
         .on_window_event(|event| {
             if let WindowEvent::CloseRequested { api, .. } = event.event() {

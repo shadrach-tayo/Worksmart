@@ -63,3 +63,11 @@ export async function hide_window(name: string) {
 export async function minimize_window(name: string) {
     await invoke("minimize_window", { name });
 }
+
+export async function list_camera_devices(): Promise<string[]> {
+    return await invoke("list_camera_devices");
+}
+
+export async function select_camera_device(name: string) {
+    await invoke("select_camera_device", { name });
+}
