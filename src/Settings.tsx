@@ -10,6 +10,7 @@ import {
     list_camera_devices,
     select_camera_device,
     set_preferences,
+    webcam_capture,
 } from "./ipc";
 import "./styles/Settings.css"; // Assuming styles are moved to a separate CSS file named Settings.css
 import { Configuration } from "./types";
@@ -65,6 +66,10 @@ const Settings = () => {
         evt.preventDefault();
         console.log("Selection changed", evt.target.value);
         select_camera_device(evt.target.value);
+    };
+
+    const onCameraTest = async () => {
+        const _base64img = await webcam_capture();
     };
 
     return (
@@ -220,6 +225,7 @@ const Settings = () => {
                         <button
                             type="button"
                             className="btn btn-outline-light mb-4"
+                            onClick={onCameraTest}
                         >
                             Camera Test
                         </button>

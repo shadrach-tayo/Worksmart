@@ -5,15 +5,17 @@ use core_graphics::access::ScreenCaptureAccess;
 
 use dcv_color_primitives::convert_image;
 use gst::prelude::*;
+use image::{ImageBuffer, ImageReader, Rgb, RgbImage};
 use nokhwa::pixel_format::RgbFormat;
 use nokhwa::utils::{
-    CameraFormat, CameraIndex, CameraInfo, FrameFormat, RequestedFormat, RequestedFormatType,
-    Resolution,
+    yuyv422_to_rgb, CameraFormat, CameraIndex, CameraInfo, FrameFormat, RequestedFormat,
+    RequestedFormatType, Resolution,
 };
 use nokhwa::{backends::capture::*, Camera};
-use nokhwa::{native_api_backend, pixel_format};
+use nokhwa::{native_api_backend, pixel_format, NokhwaError};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
+use std::io::Cursor;
 use std::{
     io::Write,
     ops::Mul,
@@ -28,7 +30,9 @@ use tauri::{AppHandle, Manager, State, Window};
 use tokio::{fs, sync::broadcast, time};
 #[allow(unused_imports)]
 use xcap::{Monitor, Window as XcapWindow};
+use yuv::convert::ToRGB;
 
+use crate::encoder::uyvy422_frame;
 use crate::{storage, windows, Auth, AuthConfig, Configuration, SelectedDevice};
 
 use crate::{
@@ -232,7 +236,10 @@ pub fn get_auth(auth_config: State<'_, AuthConfig>) -> Result<Option<Auth>, Stri
 }
 
 #[tauri::command]
-pub fn webcam_capture(general_config: State<'_, GeneralConfig>) -> Result<(), String> {
+pub fn webcam_capture(
+    general_config: State<'_, GeneralConfig>,
+    selected_device: State<'_, SelectedDevice>,
+) -> Result<(), String> {
     let config = general_config.lock().unwrap().clone();
 
     let is_granted = nokhwa::nokhwa_check();
@@ -249,12 +256,14 @@ pub fn webcam_capture(general_config: State<'_, GeneralConfig>) -> Result<(), St
     }
 
     // first camera in system
-    let index = CameraIndex::Index(0);
-    // request the absolute highest resolution CameraFormat that can be decoded to RGB.
-    // let resolution = Resolution::new(1920, 1080);
+    let index = selected_device.lock().unwrap().clone().index().clone(); // CameraIndex::Index(0);
+                                                                         // request the absolute highest resolution CameraFormat that can be decoded to RGB.
+                                                                         // let resolution = Resolution::new(1920, 1080);
 
     // let f_format = FrameFormat::YUYV;
     // let fps = 30;
+    // let resolution = Resolution::new(720, 480);
+    // let resolution = Resolution::new(1920, 1080);
     // let camera_format = CameraFormat::new(resolution, f_format, fps);
 
     let requested = RequestedFormat::new::<pixel_format::RgbFormat>(
@@ -281,55 +290,91 @@ pub fn webcam_capture(general_config: State<'_, GeneralConfig>) -> Result<(), St
     camera.stop_stream().unwrap();
     println!("Captured Single Frame of {}", frame.buffer().len());
 
-    #[allow(non_snake_case)]
-    let WIDTH = frame.resolution().width();
-    #[allow(non_snake_case)]
-    let HEIGHT = frame.resolution().height();
-
-    let src_data = Box::new(frame.buffer());
-    let mut dst_data = Box::new([0u8; 4096]);
-
-    let src_format = dcv_color_primitives::ImageFormat {
-        pixel_format: dcv_color_primitives::PixelFormat::I422,
-        color_space: dcv_color_primitives::ColorSpace::Rgb,
-        num_planes: 1,
-    };
-
-    let dst_format = dcv_color_primitives::ImageFormat {
-        pixel_format: dcv_color_primitives::PixelFormat::Rgba,
-        color_space: dcv_color_primitives::ColorSpace::Rgb,
-        num_planes: 1,
-    };
-
-    let result = convert_image(
-        WIDTH,
-        HEIGHT,
-        &src_format,
-        None,
-        #[allow(clippy::needless_borrow)]
-        &[&*src_data],
-        &dst_format,
-        None,
-        &mut [&mut *dst_data],
+    let path = storage::data_path().join(
+        config
+            .media_storage_dir
+            .clone()
+            .join("convert_buffer_to_image.jpg"),
     );
-    println!("Conversion done: {:?}", result);
+    match convert_buffer_to_image(frame.clone()) {
+        Ok(image) => {
+            if let Err(err) = image.save(path) {
+                println!("Error saving webcam image {:?}", err);
+            }
+        }
+        Err(err) => {
+            println!("Error saving webcam image {:?}", err);
+        }
+    };
+
+    // bits per pixel = 2457600 * 8 / (1280 * 960) = 16
+    let bits_per_pixel = (frame.buffer().len() as u32) * 8
+        / (frame.resolution().width() * frame.resolution().height());
+    println!("BITS PER PIXEL {bits_per_pixel}");
+
+    // use encoder
+    let yuyv422_frame = uyvy422_frame(frame.buffer(), frame.resolution().width(), frame.resolution().height());
+    let yuyv422_path = storage::data_path().join(config.media_storage_dir.clone().join("yuyv422.yuv"));
+    std::fs::write(yuyv422_path, yuyv422_frame.data(0)).unwrap();
+
+    let path = storage::data_path().join(config.media_storage_dir.clone().join("frame.raw"));
+    let yuv_path = storage::data_path().join(config.media_storage_dir.clone().join("frame.yuv"));
+    let file = std::fs::File::create(path.clone());
+    if file.is_ok() {
+        std::fs::write(path, frame.buffer()).unwrap();
+        std::fs::write(yuv_path, frame.buffer()).unwrap();
+    }
 
     // decode into an ImageBuffer
     let decoded = frame.decode_image::<pixel_format::RgbFormat>().unwrap();
     println!("Decoded Frame of {}", decoded.len());
     // std::fs::File::create(&path).expect("Cannot not save webcam image");
-    let path = storage::data_path().join(config.media_storage_dir.clone().join("webcam.jpeg"));
+    let path = storage::data_path().join(config.media_storage_dir.clone().join("webcam.jpg"));
     if let Err(err) = decoded.save(path) {
         println!("Error saving webcam image {:?}", err);
     }
-    // match camera.frame() {
-    //     Ok(frame) => {}
-    //     Err(err) => {
-    //         println!("Failed to get frame: {:?}", err);
-    //     }
-    // }
 
     Ok(())
+}
+
+fn convert_buffer_to_image(
+    buffer: nokhwa::Buffer,
+) -> Result<ImageBuffer<Rgb<u8>, Vec<u8>>, NokhwaError> {
+    let Resolution {
+        width_x: width,
+        height_y: height,
+    } = buffer.resolution();
+    let mut image_buffer = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(width, height);
+    let data = buffer.buffer();
+
+    for (y, chunk) in data
+        .chunks_exact((width * 2) as usize)
+        .enumerate()
+        .take(height as usize)
+    {
+        for (x, pixel) in chunk.chunks_exact(4).enumerate() {
+            let [u, y1, v, y2] = [
+                pixel[0] as f32,
+                pixel[1] as f32,
+                pixel[2] as f32,
+                pixel[3] as f32,
+            ];
+            let x = (x * 2) as u32;
+            image_buffer.put_pixel(x, y as u32, yuv_to_rgb(y1, u, v));
+            image_buffer.put_pixel(x + 1, y as u32, yuv_to_rgb(y2, u, v));
+        }
+    }
+
+    Ok(image_buffer)
+}
+
+//YUV to RGB conversion BT.709
+fn yuv_to_rgb(y: f32, u: f32, v: f32) -> Rgb<u8> {
+    let r = y + 1.5748 * (v - 128.0);
+    let g = y - 0.1873 * (u - 128.0) - 0.4681 * (v - 128.0);
+    let b = y + 1.8556 * (u - 128.0);
+
+    Rgb([r as u8, g as u8, b as u8])
 }
 
 #[tauri::command]
@@ -398,14 +443,7 @@ pub fn list_camera_devices() -> Result<Vec<String>, String> {
         println!("nokhwa::query(backend) error: {:?}", err);
         format!("Error listing camera devices: {:?}", err)
     })?;
-    // println!(
-    //     "[list_camera_devices] {:?}",
-    //     devices
-    //         .clone()
-    //         .into_iter()
-    //         .map(|camera| camera.human_name())
-    //         .collect::<Vec<String>>()
-    // );
+    println!("[list_camera_devices] {:?}", devices);
     Ok(devices.iter().map(|camera| camera.human_name()).collect())
 }
 
@@ -417,10 +455,13 @@ pub fn select_camera_device(selected_device: State<'_, SelectedDevice>, name: St
             let mut devices = devices;
             devices.retain(|camera| camera.human_name() == name.as_str());
 
+            println!("[camera_devices] {:?}", devices);
+
             #[allow(clippy::get_first)]
-            let camera: CameraInfo = devices.get(0).unwrap().to_owned();
-            // println!("Selected device: {:?}", camera);
-            *selected_device.lock().unwrap() = camera;
+            if let Some(camera) = devices.get(0) {
+                println!("Selected device: {:?}", camera);
+                *selected_device.lock().unwrap() = camera.to_owned();
+            }
         }
         Err(err) => {
             println!("nokhwa::query(backend) error: {:?}", err);
