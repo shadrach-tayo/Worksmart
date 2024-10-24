@@ -3102,7 +3102,6 @@ checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
 [[package]]
 name = "nokhwa"
 version = "0.10.3"
-source = "git+https://github.com/CapSoftware/nokhwa.git?branch=brendonovich-fork#2de5a760d5f1abfc062bf7d7fec155e8a0eafdcd"
 dependencies = [
  "flume 0.10.14",
  "image 0.24.9",
@@ -3117,7 +3116,6 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-linux"
 version = "0.1.0"
-source = "git+https://github.com/CapSoftware/nokhwa.git?branch=brendonovich-fork#2de5a760d5f1abfc062bf7d7fec155e8a0eafdcd"
 dependencies = [
  "nokhwa-core",
  "v4l",
@@ -3127,7 +3125,6 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-macos"
 version = "0.2.0"
-source = "git+https://github.com/CapSoftware/nokhwa.git?branch=brendonovich-fork#2de5a760d5f1abfc062bf7d7fec155e8a0eafdcd"
 dependencies = [
  "block",
  "cocoa-foundation",
@@ -3142,7 +3139,6 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-windows"
 version = "0.4.0"
-source = "git+https://github.com/CapSoftware/nokhwa.git?branch=brendonovich-fork#2de5a760d5f1abfc062bf7d7fec155e8a0eafdcd"
 dependencies = [
  "nokhwa-core",
  "once_cell",
@@ -3152,7 +3148,6 @@ dependencies = [
 [[package]]
 name = "nokhwa-core"
 version = "0.1.0"
-source = "git+https://github.com/CapSoftware/nokhwa.git?branch=brendonovich-fork#2de5a760d5f1abfc062bf7d7fec155e8a0eafdcd"
 dependencies = [
  "bytes",
  "image 0.24.9",
@@ -3657,18 +3652,18 @@ dependencies = [
 
 [[package]]
 name = "pin-project"
-version = "1.1.5"
+version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6bf43b791c5b9e34c3d182969b4abb522f9343702850a2e57f460d00d09b4b3"
+checksum = "baf123a161dde1e524adf36f90bc5d8d3462824a9c43553ad07a8183161189ec"
 dependencies = [
  "pin-project-internal",
 ]
 
 [[package]]
 name = "pin-project-internal"
-version = "1.1.5"
+version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f38a4412a78282e09a2cf38d195ea5420d15ba0602cb375210efbc877243965"
+checksum = "a4502d8515ca9f32f1fb543d987f63d95a14934883db45bdb48060b6b69257f8"
 dependencies = [
  "proc-macro2",
  "quote",

@@ -15,7 +15,7 @@ use nokhwa::{backends::capture::*, Camera};
 use nokhwa::{native_api_backend, pixel_format, NokhwaError};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
-use std::io::Cursor;
+use std::io::{Cursor, Read};
 use std::{
     io::Write,
     ops::Mul,
@@ -260,24 +260,20 @@ pub fn webcam_capture(
                                                                          // request the absolute highest resolution CameraFormat that can be decoded to RGB.
                                                                          // let resolution = Resolution::new(1920, 1080);
 
-    // let f_format = FrameFormat::YUYV;
-    // let fps = 30;
+    let f_format = FrameFormat::RAWRGB;
+    let fps = 30;
     // let resolution = Resolution::new(720, 480);
-    // let resolution = Resolution::new(1920, 1080);
-    // let camera_format = CameraFormat::new(resolution, f_format, fps);
+    let resolution = Resolution::new(1280, 720);
+    let camera_format = CameraFormat::new(resolution, f_format, fps);
 
     let requested = RequestedFormat::new::<pixel_format::RgbFormat>(
-        RequestedFormatType::AbsoluteHighestResolution,
+        RequestedFormatType::AbsoluteHighestResolution
     );
 
     println!("Camera {:?} Request {:?}", &index, &requested);
     // make the camera
     let mut camera = Camera::new(index, requested).unwrap();
-    println!(
-        "Camera created : {:?}, {:?}",
-        camera.resolution(),
-        camera.camera_format()
-    );
+
     camera.open_stream().unwrap();
 
     // get a frame
@@ -294,7 +290,7 @@ pub fn webcam_capture(
         config
             .media_storage_dir
             .clone()
-            .join("convert_buffer_to_image.jpg"),
+            .join("custom_image.jpg"),
     );
     match convert_buffer_to_image(frame.clone()) {
         Ok(image) => {
@@ -307,29 +303,30 @@ pub fn webcam_capture(
         }
     };
 
-    // bits per pixel = 2457600 * 8 / (1280 * 960) = 16
-    let bits_per_pixel = (frame.buffer().len() as u32) * 8
-        / (frame.resolution().width() * frame.resolution().height());
-    println!("BITS PER PIXEL {bits_per_pixel}");
+    // // bits per pixel = 2457600 * 8 / (1280 * 960) = 16
+    // let bits_per_pixel = (frame.buffer().len() as u32) * 8
+    //     / (frame.resolution().width() * frame.resolution().height());
+    // println!("BITS PER PIXEL {bits_per_pixel}");
 
-    // use encoder
-    let yuyv422_frame = uyvy422_frame(frame.buffer(), frame.resolution().width(), frame.resolution().height());
-    let yuyv422_path = storage::data_path().join(config.media_storage_dir.clone().join("yuyv422.yuv"));
-    std::fs::write(yuyv422_path, yuyv422_frame.data(0)).unwrap();
+    // // use encoder
+    // let yuyv422_frame = uyvy422_frame(frame.buffer(), frame.resolution().width(), frame.resolution().height());
+    // let yuyv422_path = storage::data_path().join(config.media_storage_dir.clone().join("yuyv422.yuv"));
+    // std::fs::write(yuyv422_path, yuyv422_frame.data(0)).unwrap();
 
-    let path = storage::data_path().join(config.media_storage_dir.clone().join("frame.raw"));
-    let yuv_path = storage::data_path().join(config.media_storage_dir.clone().join("frame.yuv"));
-    let file = std::fs::File::create(path.clone());
-    if file.is_ok() {
-        std::fs::write(path, frame.buffer()).unwrap();
-        std::fs::write(yuv_path, frame.buffer()).unwrap();
-    }
+    // let path = storage::data_path().join(config.media_storage_dir.clone().join("frame.raw"));
+    // let yuv_path = storage::data_path().join(config.media_storage_dir.clone().join("frame.uyvy"));
+    // let file = std::fs::File::create(path.clone());
+    // if file.is_ok() {
+    //     std::fs::write(path, frame.buffer()).unwrap();
+    //     std::fs::write(yuv_path, frame.buffer()).unwrap();
+    // }
 
     // decode into an ImageBuffer
     let decoded = frame.decode_image::<pixel_format::RgbFormat>().unwrap();
+    // let converted = convert_buffer_to_image(&decoded.into_raw().to_vec());
     println!("Decoded Frame of {}", decoded.len());
     // std::fs::File::create(&path).expect("Cannot not save webcam image");
-    let path = storage::data_path().join(config.media_storage_dir.clone().join("webcam.jpg"));
+    let path = storage::data_path().join(config.media_storage_dir.clone().join("webcam.jpeg"));
     if let Err(err) = decoded.save(path) {
         println!("Error saving webcam image {:?}", err);
     }
@@ -375,6 +372,19 @@ fn yuv_to_rgb(y: f32, u: f32, v: f32) -> Rgb<u8> {
     let b = y + 1.8556 * (u - 128.0);
 
     Rgb([r as u8, g as u8, b as u8])
+}
+
+fn yuv_to_rgb_bt709(y: f32, u: f32, v: f32) -> Rgb<u8> {
+    let y = y as f32;
+    let u = (u as f32) - 128.0;
+    let v = (v as f32) - 128.0;
+
+    let r = (y + 1.5748 * v).round().clamp(0.0, 255.0) as u8;
+    let g = (y - 0.187324 * u - 0.468124 * v).round().clamp(0.0, 255.0) as u8;
+    let b = (y + 1.8556 * u).round().clamp(0.0, 255.0) as u8;
+
+    // (r, g, b)
+    Rgb([r, g, b])
 }
 
 #[tauri::command]
