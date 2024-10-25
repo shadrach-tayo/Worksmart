@@ -37,11 +37,14 @@ anyhow = "1.0.89"
 image = "0.25.2"
 yuv = "0.1.8"
 ffmpeg = { package = "ffmpeg-next", git = "https://github.com/zmwangx/rust-ffmpeg" }
-nokhwa = { features = [
-    "input-native",
-    "output-threaded",
-], path = "../../cap-nokhwa" }
-
+# nokhwa = { features = [
+#     "input-native",
+#     "output-threaded",
+# ], path = "../../cap-nokhwa" }
+nokhwa = { git = "https://github.com/filleduchaos/nokhwa", rev = "408354f6bcdd", features = [
+    "input-avfoundation",
+    "serialize",
+] }
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
