@@ -52,6 +52,7 @@ jobs:
           version: "1.24"
           arch: "x86_64"
       - name: Install FFmpeg (Ubuntu)
+        if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
         run: |
           sudo add-apt-repository ppa:mc3man/trusty-media
           sudo apt-get update
@@ -75,6 +76,7 @@ jobs:
         with:
           version: "1.24.5"
       - name: Install FFmpeg (Macos)
+        if: matrix.platform == 'macos-latest' # (macos only)
         run: |
           brew update
           brew install ffmpeg@7
