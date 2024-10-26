@@ -43,7 +43,7 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
         run: |
           sudo apt-get update
-          sudo apt-get install libasound2-dev libudev-dev nasm libxcb-randr0-dev
+          sudo apt-get install libasound2-dev libudev-dev nasm libxcb-randr0-dev libpipewire-0.3
           $VCPKG_ROOT/vcpkg install libvpx libyuv opus aom
       - name: Install GStreamer
         if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
@@ -59,7 +59,7 @@ jobs:
         if: matrix.platform == 'macos-latest' # (macos only)
         run: |
           brew install nasm
-          $VCPKG_ROOT/vcpkg install libvpx libyuv opus aom
+          $VCPKG_ROOT/vcpkg install libvpx libyuv opus aom libavdevice-dev
       - name: Install GStreamer
         if: matrix.platform == 'macos-latest' # (macos only)
         uses: blinemedical/setup-gstreamer@v1.4.0
