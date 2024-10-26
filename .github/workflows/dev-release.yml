@@ -58,7 +58,7 @@ jobs:
       - name: Set PKG_CONFIG_PATH
         if: matrix.platform == 'macos-latest' # (macos only)
         run: |
-          export PKG_CONFIG_PATH=/opt/local/lib/pkgconfig'.
+          export PKG_CONFIG_PATH=/opt/local/lib/pkgconfig'
       - name: Install dependencies
         if: matrix.platform == 'macos-latest' # (macos only)
         run: |
