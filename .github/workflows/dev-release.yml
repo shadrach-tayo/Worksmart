@@ -41,8 +41,8 @@ jobs:
           if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             brew install pkg-config glib
             export PKG_CONFIG_ALLOW_CROSS=1
-            export PKG_CONFIG_SYSROOT_DIR=/usr/local
-            export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+            export PKG_CONFIG_SYSROOT_DIR=/opt/homebrew
+            export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig"
           elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
             sudo apt-get update
             sudo apt-get install -y pkg-config libglib2.0-dev
