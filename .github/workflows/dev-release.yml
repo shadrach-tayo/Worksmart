@@ -42,6 +42,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install libasound2-dev libudev-dev nasm libxcb-randr0-dev libpipewire-0.3
           $VCPKG_ROOT/vcpkg install libvpx libyuv opus aom
+          sudo apt-get install libavcodec-dev libavutil-dev libavformat-dev libswscale-dev libavdevice-dev
       - name: Install GStreamer (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
         uses: blinemedical/setup-gstreamer@v1.4.0
@@ -51,10 +52,13 @@ jobs:
       # End ubuntu specific steps to install gstreamer
       - name: Install FFmpeg (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
-        run: |
-          sudo add-apt-repository ppa:mc3man/trusty-media
-          sudo apt-get update
-          sudo apt-get install ffmpeg
+        uses: AnimMouse/setup-ffmpeg@v1
+        with:
+          version: 7.1
+        # run: |
+        #   sudo add-apt-repository ppa:mc3man/trusty-media
+        #   sudo apt-get update
+        #   sudo apt-get install ffmpeg
       #
       - name: Install dependencies (Macos)
         if: matrix.platform == 'macos-latest' # (macos only)
@@ -68,9 +72,12 @@ jobs:
           version: "1.24.5"
       - name: Install FFmpeg (Macos)
         if: matrix.platform == 'macos-latest' # (macos only)
-        run: |
-          brew update
-          brew install ffmpeg@7
+        uses: AnimMouse/setup-ffmpeg@v1
+        with:
+          version: 7.1.0
+        # run: |
+        #   brew update
+        #   brew install ffmpeg@7
 
       # macos specific steps to install gstreamer
       #
@@ -86,24 +93,9 @@ jobs:
           version: "1.24.5"
       - name: Install FFmpeg
         if: matrix.platform == 'windows-latest' # (windows only)
-        uses: FedericoCarboni/setup-ffmpeg@v3
-        id: setup-ffmpeg
+        uses: AnimMouse/setup-ffmpeg@v1
         with:
-          # A specific version to download, may also be "release" or a specific version
-          # like "6.1.0". At the moment semver specifiers (i.e. >=6.1.0) are supported
-          # only on Windows, on other platforms they are allowed but version is matched
-          # exactly regardless.
-          ffmpeg-version: release
-          # Target architecture of the ffmpeg executable to install. Defaults to the
-          # system architecture. Only x64 and arm64 are supported (arm64 only on Linux).
-          architecture: ""
-          # Linking type of the binaries. Use "shared" to download shared binaries and
-          # "static" for statically linked ones. Shared builds are currently only available
-          # for windows releases. Defaults to "static"
-          linking-type: static
-          # As of version 3 of this action, builds are no longer downloaded from GitHub
-          # except on Windows: https://github.com/GyanD/codexffmpeg/releases.
-          github-token: ${{ github.server_url == 'https://github.com' && github.token || '' }}
+          version: 7.1
       # - run: ffmpeg -i input.avi output.mkv
       #   if: matrix.platform == 'windows-latest' # (windows only)
       # End windows specific steps
