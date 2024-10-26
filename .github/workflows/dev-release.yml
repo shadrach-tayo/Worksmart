@@ -55,11 +55,15 @@ jobs:
       #
       #
       # macos specific steps
+      - name: Set PKG_CONFIG_PATH
+        if: matrix.platform == 'macos-latest' # (macos only)
+        run: |
+          export PKG_CONFIG_PATH=/opt/local/lib/pkgconfig'.
       - name: Install dependencies
         if: matrix.platform == 'macos-latest' # (macos only)
         run: |
-          brew install nasm
-          $VCPKG_ROOT/vcpkg install libvpx libyuv opus aom libavdevice-dev
+          brew install nasm libav
+          $VCPKG_ROOT/vcpkg install libvpx libyuv opus aom
       - name: Install GStreamer
         if: matrix.platform == 'macos-latest' # (macos only)
         uses: blinemedical/setup-gstreamer@v1.4.0
