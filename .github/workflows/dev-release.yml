@@ -71,9 +71,7 @@ jobs:
       - name: Install dependencies
         if: matrix.platform == 'windows-latest' # (windows only)
         run: |
-          sudo apt-get update
-          sudo apt-get install libasound2-dev libudev-dev nasm libxcb-randr0-dev
-          $VCPKG_ROOT/vcpkg install libvpx libyuv opus aom
+          & "$env:VCPKG_ROOT\vcpkg" install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
       - name: Install GStreamer
         uses: blinemedical/setup-gstreamer@v1.4.0
         if: matrix.platform == 'windows-latest' # (windows only)
