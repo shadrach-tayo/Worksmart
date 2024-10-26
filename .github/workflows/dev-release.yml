@@ -68,7 +68,7 @@ jobs:
       - name: Install dependencies (Macos)
         if: matrix.platform == 'macos-latest' # (macos only)
         run: |
-          brew install nasm libav
+          brew install nasm
           $VCPKG_ROOT/vcpkg install libvpx libyuv opus aom
       - name: Install GStreamer (Macos)
         if: matrix.platform == 'macos-latest' # (macos only)
