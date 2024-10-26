@@ -8,8 +8,6 @@ on:
     tags:
       - "v*"
 
-# This workflow will trigger on each push to the `release` branch to create or update a GitHub release, build your app, and upload the artifacts to the release.
-
 jobs:
   publish-tauri:
     permissions:
@@ -113,8 +111,8 @@ jobs:
           # As of version 3 of this action, builds are no longer downloaded from GitHub
           # except on Windows: https://github.com/GyanD/codexffmpeg/releases.
           github-token: ${{ github.server_url == 'https://github.com' && github.token || '' }}
-      - run: ffmpeg -i input.avi output.mkv
-        if: matrix.platform == 'windows-latest' # (windows only)
+      # - run: ffmpeg -i input.avi output.mkv
+      #   if: matrix.platform == 'windows-latest' # (windows only)
       # End windows specific steps
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
