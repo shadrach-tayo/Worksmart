@@ -35,28 +35,6 @@ jobs:
       # Setup vcpkg package manager for gstreamer installation
       - uses: friendlyanon/setup-vcpkg@v1
         with: { committish: c8696863d371ab7f46e213d8f5ca923c4aef2a00 }
-      # Install pkg-config for all platforms
-      - name: Set up for ${{ matrix.platform }}
-        run: |
-          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            brew install pkg-config glib
-            export PKG_CONFIG_ALLOW_CROSS=1
-            export PKG_CONFIG_SYSROOT_DIR=/opt/homebrew
-            export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig"
-          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            sudo apt-get update
-            sudo apt-get install -y pkg-config libglib2.0-dev
-            export PKG_CONFIG_ALLOW_CROSS=1
-            export PKG_CONFIG_SYSROOT_DIR=/usr
-            export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/share/pkgconfig
-          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            choco install pkgconfiglite
-            setx PKG_CONFIG_ALLOW_CROSS 1
-            setx PKG_CONFIG_SYSROOT_DIR "C:\\Program Files\\pkgconfig-lite"
-            setx PKG_CONFIG_PATH "C:\\Program Files\\pkgconfig-lite\\lib\\pkgconfig"
-          fi
-        shell: bash
-        #
         # ubuntu specific steps to install gstreamer
       - name: Install dependencies (Ubuntu)
         if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
@@ -78,15 +56,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install ffmpeg
       #
-      #
-      # macos specific steps
-      # - name: Set PKG_CONFIG_PATH (Macos)
-      #   if: matrix.platform == 'macos-latest' # (macos only)
-      #   run: |
-      #     export PKG_CONFIG_SYSROOT_DIR='/usr/local'
-      #     export PKG_CONFIG_PATH='/opt/local/lib/pkgconfig'
-      #     export PKG_CONFIG_PATH='/opt/homebrew/lib/pkgconfig'
-      #     export PKG_CONFIG_ALLOW_CROSS=1
       - name: Install dependencies (Macos)
         if: matrix.platform == 'macos-latest' # (macos only)
         run: |
@@ -138,6 +107,29 @@ jobs:
       # - run: ffmpeg -i input.avi output.mkv
       #   if: matrix.platform == 'windows-latest' # (windows only)
       # End windows specific steps
+      #
+      # Install pkg-config for all platforms
+      - name: Set up for ${{ matrix.platform }}
+        run: |
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            brew install pkg-config glib
+            export PKG_CONFIG_ALLOW_CROSS=1
+            export PKG_CONFIG_SYSROOT_DIR=/opt/homebrew
+            export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
+          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            sudo apt-get update
+            sudo apt-get install -y pkg-config libglib2.0-dev
+            export PKG_CONFIG_ALLOW_CROSS=1
+            export PKG_CONFIG_SYSROOT_DIR=/usr
+            export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/share/pkgconfig
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            choco install pkgconfiglite
+            setx PKG_CONFIG_ALLOW_CROSS 1
+            setx PKG_CONFIG_SYSROOT_DIR "C:\\Program Files\\pkgconfig-lite"
+            setx PKG_CONFIG_PATH "C:\\Program Files\\pkgconfig-lite\\lib\\pkgconfig"
+          fi
+        shell: bash
+
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
