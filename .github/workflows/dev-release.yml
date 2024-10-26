@@ -74,7 +74,7 @@ jobs:
         if: matrix.platform == 'macos-latest' # (macos only)
         uses: AnimMouse/setup-ffmpeg@v1
         with:
-          version: 7.1.0
+          version: 7.1
         # run: |
         #   brew update
         #   brew install ffmpeg@7
