@@ -39,7 +39,6 @@ jobs:
         with: { committish: c8696863d371ab7f46e213d8f5ca923c4aef2a00 }
         #
         # ubuntu specific steps to install gstreamer
-        if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
       - name: Install dependencies
         if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
         run: |
