@@ -32,7 +32,7 @@ use tokio::{fs, sync::broadcast, time};
 use xcap::{Monitor, Window as XcapWindow};
 use yuv::convert::ToRGB;
 
-use crate::encoder::uyvy422_frame;
+// use crate::encoder::uyvy422_frame;
 use crate::{storage, windows, Auth, AuthConfig, Configuration, SelectedDevice};
 
 use crate::{

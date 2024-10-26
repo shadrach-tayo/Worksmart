@@ -50,15 +50,15 @@ jobs:
           version: "1.24"
           arch: "x86_64"
       # End ubuntu specific steps to install gstreamer
-      - name: Install FFmpeg (Ubuntu)
-        if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
-        uses: AnimMouse/setup-ffmpeg@v1
-        with:
-          version: 7.1
-        # run: |
-        #   sudo add-apt-repository ppa:mc3man/trusty-media
-        #   sudo apt-get update
-        #   sudo apt-get install ffmpeg
+      # - name: Install FFmpeg (Ubuntu)
+      #   if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
+      #   uses: AnimMouse/setup-ffmpeg@v1
+      #   with:
+      #     version: 7.1
+      # run: |
+      #   sudo add-apt-repository ppa:mc3man/trusty-media
+      #   sudo apt-get update
+      #   sudo apt-get install ffmpeg
       #
       - name: Install dependencies (Macos)
         if: matrix.platform == 'macos-latest' # (macos only)
@@ -70,14 +70,14 @@ jobs:
         uses: blinemedical/setup-gstreamer@v1.4.0
         with:
           version: "1.24.5"
-      - name: Install FFmpeg (Macos)
-        if: matrix.platform == 'macos-latest' # (macos only)
-        uses: AnimMouse/setup-ffmpeg@v1
-        with:
-          version: 7.1
-        # run: |
-        #   brew update
-        #   brew install ffmpeg@7
+      # - name: Install FFmpeg (Macos)
+      #   if: matrix.platform == 'macos-latest' # (macos only)
+      #   uses: AnimMouse/setup-ffmpeg@v1
+      #   with:
+      #     version: 7.1
+      # run: |
+      #   brew update
+      #   brew install ffmpeg@7
 
       # macos specific steps to install gstreamer
       #
@@ -91,11 +91,11 @@ jobs:
         if: matrix.platform == 'windows-latest' # (windows only)
         with:
           version: "1.24.5"
-      - name: Install FFmpeg
-        if: matrix.platform == 'windows-latest' # (windows only)
-        uses: AnimMouse/setup-ffmpeg@v1
-        with:
-          version: 7.1
+      # - name: Install FFmpeg
+      #   if: matrix.platform == 'windows-latest' # (windows only)
+      #   uses: AnimMouse/setup-ffmpeg@v1
+      #   with:
+      #     version: 7.1
       # - run: ffmpeg -i input.avi output.mkv
       #   if: matrix.platform == 'windows-latest' # (windows only)
       # End windows specific steps
