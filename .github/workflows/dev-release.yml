@@ -1,9 +1,12 @@
 name: "publish"
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - dev
+    tags:
+      - "v*"
 
 # This workflow will trigger on each push to the `release` branch to create or update a GitHub release, build your app, and upload the artifacts to the release.
 
@@ -27,12 +30,57 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
-
       - name: setup node
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-
+      # Setup vcpkg package manager for gstreamer installation
+      - uses: friendlyanon/setup-vcpkg@v1
+        with: { committish: c8696863d371ab7f46e213d8f5ca923c4aef2a00 }
+        #
+        # ubuntu specific steps to install gstreamer
+        if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
+      - name: Install dependencies
+        if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
+        run: |
+          sudo apt-get update
+          sudo apt-get install libasound2-dev libudev-dev nasm libxcb-randr0-dev
+          $VCPKG_ROOT/vcpkg install libvpx libyuv opus aom
+      - name: Install GStreamer
+        if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
+        uses: blinemedical/setup-gstreamer@v1.4.0
+        with:
+          version: "1.24"
+          arch: "x86_64"
+      # End ubuntu specific steps to install gstreamer
+      #
+      #
+      # macos specific steps
+      - name: Install dependencies
+        if: matrix.platform == 'macos-latest' # (macos only)
+        run: |
+          brew install nasm
+          $VCPKG_ROOT/vcpkg install libvpx libyuv opus aom
+      - name: Install GStreamer
+        if: matrix.platform == 'macos-latest' # (macos only)
+        uses: blinemedical/setup-gstreamer@v1.4.0
+        with:
+          version: "1.24.5"
+      # macos specific steps to install gstreamer
+      #
+      # windows specific steps to support gstreamer
+      - name: Install dependencies
+        if: matrix.platform == 'windows-latest' # (windows only)
+        run: |
+          sudo apt-get update
+          sudo apt-get install libasound2-dev libudev-dev nasm libxcb-randr0-dev
+          $VCPKG_ROOT/vcpkg install libvpx libyuv opus aom
+      - name: Install GStreamer
+        uses: blinemedical/setup-gstreamer@v1.4.0
+        if: matrix.platform == 'windows-latest' # (windows only)
+        with:
+          version: "1.24.5"
+      # End windows specific steps
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -46,13 +94,14 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
         # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
         # You can remove the one that doesn't apply to your app to speed up the workflow a bit.
-
       - name: install frontend dependencies
         run: yarn install # change this to npm, pnpm or bun depending on which one you use.
 
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           tagName: worksmart-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
           releaseName: "Worksmart v__VERSION__"
