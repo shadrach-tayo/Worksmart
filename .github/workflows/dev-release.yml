@@ -79,11 +79,7 @@ jobs:
       - name: Set up for ${{ matrix.platform }}
         if: matrix.args != '--target x86_64-apple-darwin'
         run: |
-          if [[ "${{ matrix.platform }}" == "macos-latest" && 'aarch64-apple-darwin' ]]; then
-            export PKG_CONFIG_SYSROOT_DIR="/opt/homebrew:/usr/local"
-            export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/opt/homebrew/lib/pkgconfig:$PKG_CONFIG_PATH"
-
-          elif [[ "${{ matrix.platform }}" == "ubuntu-latest" ]]; then
+          if [[ "${{ matrix.platform }}" == "ubuntu-latest" ]]; then
             sudo apt-get update
             sudo apt-get install -y pkg-config libglib2.0-dev
             export PKG_CONFIG_SYSROOT_DIR=/usr
@@ -111,6 +107,7 @@ jobs:
             sudo mkdir -p /usr/local/lib/pkgconfig
             ln -sf /opt/homebrew/lib/pkgconfig/glib-2.0.pc /usr/local/lib/pkgconfig/
             ln -sf /opt/homebrew/lib/pkgconfig/gio-2.0.pc /usr/local/lib/pkgconfig/
+          fi
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
