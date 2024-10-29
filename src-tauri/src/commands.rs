@@ -4,7 +4,7 @@ use chrono::Utc;
 use core_graphics::access::ScreenCaptureAccess;
 
 use dcv_color_primitives::convert_image;
-use gst::prelude::*;
+// use gst::prelude::*;
 use image::{ImageBuffer, ImageReader, Rgb, RgbImage};
 use nokhwa::pixel_format::RgbFormat;
 use nokhwa::utils::{

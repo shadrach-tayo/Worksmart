@@ -1945,34 +1945,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gstreamer-app"
-version = "0.22.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1363313eb1931d66ac0b82c9b477fdd066af9dc118ea844966f85b6d99f261fd"
-dependencies = [
- "futures-core",
- "futures-sink",
- "glib 0.19.9",
- "gstreamer",
- "gstreamer-app-sys",
- "gstreamer-base",
- "libc",
-]
-
-[[package]]
-name = "gstreamer-app-sys"
-version = "0.22.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed667453517b47754b9f9d28c096074e5d565f1cc48c6fa2483b1ea10d7688d3"
-dependencies = [
- "glib-sys 0.19.8",
- "gstreamer-base-sys",
- "gstreamer-sys",
- "libc",
- "system-deps 6.2.2",
-]
-
-[[package]]
 name = "gstreamer-audio"
 version = "0.22.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6427,8 +6399,6 @@ dependencies = [
  "dcv-color-primitives",
  "directories",
  "gst-plugin-fallbackswitch",
- "gstreamer",
- "gstreamer-app",
  "iana-time-zone",
  "image 0.25.2",
  "nokhwa",
