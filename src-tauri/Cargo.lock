@@ -2841,7 +2841,7 @@ checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
 [[package]]
 name = "nokhwa"
 version = "0.10.3"
-source = "git+https://github.com/filleduchaos/nokhwa?rev=408354f6bcdd#408354f6bcddb00bfc2cb4f9e62ce3854e438ade"
+source = "git+https://github.com/capsoftware/nokhwa?rev=6ce1e8270d57#6ce1e8270d57436e6caa6776247dab70aed13b65"
 dependencies = [
  "flume 0.10.14",
  "image 0.24.9",
@@ -2855,7 +2855,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-macos"
 version = "0.2.0"
-source = "git+https://github.com/filleduchaos/nokhwa?rev=408354f6bcdd#408354f6bcddb00bfc2cb4f9e62ce3854e438ade"
+source = "git+https://github.com/capsoftware/nokhwa?rev=6ce1e8270d57#6ce1e8270d57436e6caa6776247dab70aed13b65"
 dependencies = [
  "block",
  "cocoa-foundation",
@@ -2870,7 +2870,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-core"
 version = "0.1.0"
-source = "git+https://github.com/filleduchaos/nokhwa?rev=408354f6bcdd#408354f6bcddb00bfc2cb4f9e62ce3854e438ade"
+source = "git+https://github.com/capsoftware/nokhwa?rev=6ce1e8270d57#6ce1e8270d57436e6caa6776247dab70aed13b65"
 dependencies = [
  "bytes",
  "image 0.24.9",
@@ -6169,6 +6169,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tokio",
+ "uuid",
  "xcap",
  "yuv",
 ]

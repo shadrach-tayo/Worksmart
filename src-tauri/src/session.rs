@@ -1,7 +1,7 @@
 use std::{
     path::PathBuf,
-    sync::{Arc, Mutex, RwLock},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    sync::{self, atomic::AtomicBool, Arc, Mutex, RwLock},
+    time::Duration,
 };
 
 // use chrono::{DateTime, Utc};
@@ -11,7 +11,7 @@ use tauri::{AppHandle, Manager};
 use tokio::sync::broadcast;
 use xcap::Monitor;
 
-use crate::{gen_rand_string, get_current_datetime, storage, AppState, GeneralConfig, Shutdown};
+use crate::{gen_rand_string, get_current_datetime, storage, AppState, CameraController, CameraSnapshotOptions, GeneralConfig, SelectedDevice, Shutdown};
 
 pub type SessionChannel = tokio::sync::broadcast::Sender<()>;
 pub type SessionState = Arc<Mutex<Session>>;
@@ -34,9 +34,11 @@ pub struct TimeCapsule {
     pub session_id: String,
     pub mouse_clicks: Arc<RwLock<Vec<DateTimeTz>>>,
     pub keystrokes: Arc<RwLock<Vec<DateTimeTz>>>,
-    pub media: Arc<RwLock<Vec<String>>>,
+    // pub media: Arc<RwLock<Vec<String>>>,
     pub started_at: String,
     pub ended_at: Option<String>,
+    pub storage_path: PathBuf,
+    exited: Arc<AtomicBool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -45,7 +47,7 @@ pub struct StorageTimeCapsule {
     pub session_id: String,
     pub mouse_clicks: Vec<DateTimeTz>,
     pub keystrokes: Vec<DateTimeTz>,
-    pub media: Vec<String>,
+    // pub media: Vec<String>,
     pub started_at: String,
     pub ended_at: Option<String>,
 }
@@ -56,15 +58,27 @@ impl Session {
 
         let mut shutdown = Shutdown::new(self.notify_shutdown.subscribe());
         let mut is_shutdown = false;
-        while !shutdown.is_shutdown() {
+        while !is_shutdown {
+            let id = gen_rand_string(16);
+            let dir =  app.state::<GeneralConfig>()
+                .lock()
+                .unwrap()
+                .capsule_storage_dir
+                .clone();
+
+            let storage_path = storage::data_path().join(dir).join(id.clone());
+            std::fs::create_dir_all(&storage_path).expect("Can't create capsule directory");
+
             let mut time_capsule = TimeCapsule {
-                id: gen_rand_string(16),
+                id,
+                storage_path,
                 session_id: self.id.clone(),
                 mouse_clicks: Arc::new(RwLock::new(vec![])),
                 keystrokes: Arc::new(RwLock::new(vec![])),
-                media: Arc::new(RwLock::new(vec![])),
+                // media: Arc::new(RwLock::new(vec![])),
                 started_at: get_current_datetime().to_rfc2822(),
                 ended_at: None,
+                exited: Arc::new(AtomicBool::new(false)),
             };
 
             let capsule_id = time_capsule.id.clone();
@@ -92,21 +106,15 @@ impl Session {
                             };
                     },
                 _ = shutdown.recv() => {
+                    is_shutdown = true;
                     println!("Shutdown signal: {}, session done: {}", shutdown.is_shutdown(), self.shutdown.is_shutdown());
 
                 }
             }
 
-            let storage_path = storage::data_path().join(
-                app.state::<GeneralConfig>()
-                    .lock()
-                    .unwrap()
-                    .capsule_storage_dir
-                    .clone(),
-            );
-
+            time_capsule.exit();
             tokio::spawn(async move {
-                if let Err(err) = save_capsule(time_capsule, storage_path).await {
+                if let Err(err) = save_capsule(time_capsule).await {
                     println!("Couldn't save time capsule: {:?}", err);
                     // todo: log error to server and save to local error log
                 }
@@ -161,6 +169,7 @@ impl TimeCapsule {
                     resp = mouse_click_rx.recv() => {
                         match resp {
                             Ok(dt) => {
+                                // println!("MouseClick Event: {:?}", &dt.to_rfc3339());
                                 mouseclicks.write().unwrap().push(dt.to_rfc2822());
                             }
                             Err(err) => {
@@ -171,6 +180,8 @@ impl TimeCapsule {
                 }
             }
         };
+        tokio::spawn(listen_for_mouse_clicks);
+
 
         let listen_for_keystrokes = async move {
             while !keystroke_shutdown.is_shutdown() {
@@ -182,6 +193,7 @@ impl TimeCapsule {
                     resp = keystroke_rx.recv() => {
                         match resp {
                             Ok(dt) => {
+                                // println!("keystroke Event: {:?}", &dt);
                                 keystrokes.write().unwrap().push(dt.to_rfc2822());
                             }
                             Err(err) => {
@@ -191,17 +203,12 @@ impl TimeCapsule {
                     }
                 }
             }
-            println!("keystroke is shutdown");
-        };
 
-        let storage_path = storage::data_path().join(
-            app_handle
-                .state::<GeneralConfig>()
-                .lock()
-                .unwrap()
-                .media_storage_dir
-                .clone(),
-        );
+            // drop(keystroke_rx);
+        };
+        tokio::spawn(listen_for_keystrokes);
+
+        let storage_path = Arc::new(self.storage_path.clone());
 
         let time_gap_in_secs = app_handle
             .state::<GeneralConfig>()
@@ -216,20 +223,25 @@ impl TimeCapsule {
             gen.gen_range(min_capture_start_time..=max_delay_based_on_capture_lag)
         };
 
-        let screenshots = Arc::clone(&self.media);
-        let capsule_id = self.id.clone();
-        let media_capture_task = tokio::spawn(async move {
-            println!("Media capture scheduled to run at: {delay} seconds");
+        // let screenshots = Arc::clone(&self.media);
+        // let capsule_id = self.id.clone();
+        let media_storage_path = Arc::clone(&storage_path);
+        let capsule_exited = self.exited.clone();
+        tokio::spawn(async move {
             tokio::time::sleep(Duration::from_secs(delay as u64)).await;
+
+            if capsule_exited.load(sync::atomic::Ordering::SeqCst) {
+                return;
+            }
 
             let monitors = Monitor::all().unwrap();
             for monitor in monitors {
                 let image = monitor.capture_image().unwrap();
-                let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-                let img_path = storage_path.join(format!(
-                    "{}-{}-{}.png",
-                    capsule_id,
-                    timestamp.as_nanos(),
+                // let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+                let img_path = media_storage_path.clone().join(format!(
+                    "screenshot-{}-{}.png",
+                    get_current_datetime().to_rfc3339(),
+                    // todo: use active window name
                     monitor.name(),
                 ));
 
@@ -237,10 +249,10 @@ impl TimeCapsule {
 
                 if file.is_ok() {
                     image.save(&img_path).unwrap();
-                    screenshots
-                        .write()
-                        .unwrap()
-                        .push(img_path.to_str().unwrap().to_owned());
+                    // screenshots
+                    //     .write()
+                    //     .unwrap()
+                    //     .push(img_path.to_str().unwrap().to_owned());
                 } else {
                     // save to error log and stream to server later
                     println!("Error saving screenshot to dir: {:?}", img_path);
@@ -285,31 +297,37 @@ impl TimeCapsule {
             //         .push(img_path.to_str().unwrap().to_owned());
             // }
             // println!("Windows Capture Done: {:?}", start.elapsed());
+        });
 
-            tokio::time::sleep(Duration::from_secs(
-                time_gap_in_secs - max_delay_based_on_capture_lag,
-            ))
-            .await;
-            // }
+        let selected_device = app_handle.state::<SelectedDevice>().lock().unwrap().clone().human_name();
+        let webcam_storage_path = Arc::clone(&storage_path);
+
+        let exited = self.exited.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(delay as u64)).await;
+
+            if exited.load(sync::atomic::Ordering::SeqCst) {
+                return;
+            }
+
+            if let Err(err) = CameraController
+                ::take_snapshot(
+                    CameraSnapshotOptions {
+                        save_path: webcam_storage_path.to_path_buf(),
+                        selected_device
+                    }
+                ).await
+            {
+                eprintln!("Webcam snapshot error: {err}");
+            }
         });
 
         let timeout = tokio::spawn(tokio::time::sleep(Duration::from_secs(time_gap_in_secs)));
 
-        let mouseclick_task = tokio::spawn(listen_for_mouse_clicks);
-        let keystroke_task = tokio::spawn(listen_for_keystrokes);
-
         let mut shutdown = shutdown;
         let mut shutdown_signal_received = false;
+
         tokio::select! {
-            _ = media_capture_task => {
-                println!("Media capture task exited!");
-            },
-            _ = mouseclick_task => {
-                println!("Mouse click listener shutdown");
-            },
-            _ = keystroke_task => {
-                println!("Keystroke listner shutdown");
-            },
             _ = timeout => println!("Sessioon Timeout"),
             _ = shutdown.recv() => {
                 shutdown_signal_received = true;
@@ -325,28 +343,39 @@ impl TimeCapsule {
         self.ended_at = Some(get_current_datetime().to_rfc2822());
         Ok(shutdown_signal_received)
     }
+
+    pub fn exit(&mut self) {
+        self.exited.store(true ,sync::atomic::Ordering::SeqCst);
+        println!("Exited: {}", self.exited.load(sync::atomic::Ordering::SeqCst));
+    }
 }
 
-async fn save_capsule(time_capsule: TimeCapsule, storage_path: PathBuf) -> crate::Result<()> {
+async fn save_capsule(time_capsule: TimeCapsule) -> crate::Result<()> {
+
     let TimeCapsule {
         id,
-        media,
+        // media,
         ended_at,
         started_at,
         session_id,
         keystrokes,
         mouse_clicks,
+        storage_path,
+        exited: _,
     } = time_capsule;
+
 
     let value = StorageTimeCapsule {
         id,
         ended_at,
         started_at,
         session_id,
-        media: media.read().unwrap().clone(),
+        // media: media.read().unwrap().clone(),
         mouse_clicks: mouse_clicks.read().unwrap().clone(),
         keystrokes: keystrokes.read().unwrap().clone(),
     };
+
+    dbg!(&value);
 
     let path = storage_path.to_str().unwrap();
 
@@ -361,7 +390,7 @@ async fn save_capsule(time_capsule: TimeCapsule, storage_path: PathBuf) -> crate
         }
     }
 
-    storage::save_to_data_path(&value, storage_path.join(format!("{}.json", value.id)));
+    storage::save_to_data_path(&value, storage_path.join("metadata.json"));
 
     Ok(())
 }

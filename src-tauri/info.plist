@@ -2,9 +2,32 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>cap</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>icon.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>Worksmart Recording</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
+			<key>LSTypeIsPackage</key>
+			<true/>
+		</dict>
+	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Request camera access for WebRTC</string>
+	<string>Worksmart uses your camera to record you in your Worksmarts</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Request microphone access for WebRTC</string>
+	<string>Worksmart uses your microphone to record you in your Worksmarts</string>
+	<key>NSScreenWorksmarttureUsageDescription</key>
+	<string>Worksmart captures your screen as part of recording your Worksmarts</string>
+	<key>NSCameraUseContinuityCameraDeviceType</key>
+	<string>Worksmart uses this to take webcam snapshot</string>
 </dict>
 </plist>

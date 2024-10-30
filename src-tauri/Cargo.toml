@@ -30,6 +30,11 @@ scap = "0.0.5"
 #     "v1_24",
 # ] }
 # gst-plugin-fallbackswitch = "0.12.4"
+uuid = { version = "1.10.0", features = ["v4"] }
+nokhwa = { git = "https://github.com/capsoftware/nokhwa", rev = "6ce1e8270d57", features = [
+    "input-avfoundation",
+    "serialize",
+] }
 chrono = "0.4.38"
 chrono-tz = "0.10.0"
 iana-time-zone = "0.1.61"
@@ -40,15 +45,8 @@ auto-launch = "0.5.0"
 anyhow = "1.0.89"
 image = "0.25.2"
 yuv = "0.1.8"
-# ffmpeg = { package = "ffmpeg-next", git = "https://github.com/zmwangx/rust-ffmpeg" }
-# nokhwa = { features = [
-#     "input-native",
-#     "output-threaded",
-# ], path = "../../cap-nokhwa" }
-nokhwa = { git = "https://github.com/filleduchaos/nokhwa", rev = "408354f6bcdd", features = [
-    "input-avfoundation",
-    "serialize",
-] }
+
+
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]

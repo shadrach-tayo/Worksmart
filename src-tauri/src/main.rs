@@ -1,11 +1,9 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{
-    io::Write,
-    sync::{atomic, Arc, Mutex},
-};
+#![allow(unused_imports)]
 
+use std::sync::{atomic, Arc, Mutex};
 use chrono::{DateTime, Utc};
 // use gst::prelude::*;
 
@@ -15,42 +13,38 @@ use rdev::{listen, Event, EventType};
 use tauri::{Manager, WindowEvent};
 
 use worksmart::{
-    autostart, commands, gen_rand_string, get_current_datetime, get_default_camera,
-    get_storage_path,
-    // recorder::{self, gstreamer_loop},
-    session::{SessionChannel, SessionState},
-    state::{KeystrokeBroadCaster, MouseclickBroadCaster},
-    windows, AppState, Auth, AuthConfig, Configuration, GeneralConfig, RecordChannel,
-    SelectedDevice, Session, Shutdown,
+    autostart, commands, gen_rand_string, get_current_datetime, get_default_camera, get_storage_path, session::{SessionChannel, SessionState}, state::{KeystrokeBroadCaster, MouseclickBroadCaster}, windows, AppState, Auth, AuthConfig, CameraController, Configuration, GeneralConfig, RecordChannel, SelectedDevice, Session, Shutdown
 };
 
-pub fn create_device_query_listener(handle: tauri::AppHandle) {
-    std::thread::spawn(|| {
+pub fn create_device_query_listener(mouseclick_rx: MouseclickBroadCaster, keystroke_rx: KeystrokeBroadCaster) {
+    tauri::async_runtime::spawn(async move {
         let callback = move |event: Event| {
             match event.event_type {
                 EventType::ButtonPress(rdev::Button::Left) => {
-                    if let Err(err) = handle
-                        .state::<AppState>()
-                        .mouseclick_rx
-                        .as_ref()
-                        .unwrap()
+                    if let Err(err) =
+                        mouseclick_rx
                         .send(get_current_datetime())
                     {
                         // print error log or send stat to server
-                        println!("Error broadcasting Mouse event: {:?}", err);
+                        eprintln!("Error broadcasting Mouse event: {:?}", err);
                     }
-                    // todo: broadcase mouse click to any active subscriber
                 }
+                // EventType::Wheel { delta_x, delta_y } => {
+                //     println!("Scroll captured: X: {delta_x} y: {delta_y}");
+                //     if let Err(err) =
+                //         keystroke_rx
+                //         .send(get_current_datetime())
+                //     {
+                //         // print error log or send stat to server
+                //         eprintln!("Error broadcasting Mouse wheel event: {:?}", err);
+                //     }
+                // }
                 EventType::KeyPress(_) => {
-                    if let Err(err) = handle
-                        .state::<AppState>()
-                        .keystroke_rx
-                        .as_ref()
-                        .unwrap()
+                    if let Err(err) = keystroke_rx
                         .send(get_current_datetime())
                     {
                         // print error log or send stat to server
-                        println!("Error broadcasting keystroke event: {:?}", err);
+                        eprintln!("Error broadcasting keystroke event: {:?}", err);
                     }
                 }
                 _ => (),
@@ -58,7 +52,7 @@ pub fn create_device_query_listener(handle: tauri::AppHandle) {
         };
 
         if let Err(error) = listen(callback) {
-            println!("Error: {:?}", error)
+            println!("Error listening for key/mouse events: {:?}", error)
         }
     });
 }
@@ -70,10 +64,18 @@ async fn main() {
         eprintln!("{message}");
     }));
 
+    // intialize tauri async runtime
+    tauri::async_runtime::set(tokio::runtime::Handle::current());
+
+
     let (mouseclicks_broadcaster, _): (MouseclickBroadCaster, _) =
         tokio::sync::broadcast::channel::<DateTime<Utc>>(1);
     let (keystrokes_broadcaster, _): (KeystrokeBroadCaster, _) =
         tokio::sync::broadcast::channel::<DateTime<Utc>>(1);
+
+    // attach mouse and click broadcaster/subscriber to app state
+    // only call when work is in session and close when session has ended
+    create_device_query_listener(mouseclicks_broadcaster.clone(), keystrokes_broadcaster.clone());
 
     // init gst
     // gst::init().unwrap();
@@ -160,15 +162,11 @@ async fn main() {
                 windows::show_tracker(&app.app_handle()).unwrap()
             }
 
-            // attach mouse and click broadcaster/subscriber to app state
-            // only call when work is in session and close when session has ended
-            create_device_query_listener(app.handle());
-
             // let media_data_clone = media_data.clone();
-            let output_path = get_storage_path(&app.app_handle()).unwrap();
+            // let output_path = get_storage_path(&app.app_handle()).unwrap();
 
-            let can_record: Arc<atomic::AtomicPtr<bool>> = Arc::new(atomic::AtomicPtr::new(Box::into_raw(Box::new(false))));
-            let should_capture = can_record.clone();
+            // let can_record: Arc<atomic::AtomicPtr<bool>> = Arc::new(atomic::AtomicPtr::new(Box::into_raw(Box::new(false))));
+            // let should_capture = can_record.clone();
 
             // std::thread::spawn(move || {
 

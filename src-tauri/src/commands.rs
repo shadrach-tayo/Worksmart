@@ -33,7 +33,7 @@ use xcap::{Monitor, Window as XcapWindow};
 use yuv::convert::ToRGB;
 
 // use crate::encoder::uyvy422_frame;
-use crate::{storage, windows, Auth, AuthConfig, Configuration, SelectedDevice};
+use crate::{storage, windows, Auth, AuthConfig, CameraController, Configuration, SelectedDevice};
 
 use crate::{
     configuration, gen_rand_string, get_current_datetime,
@@ -114,7 +114,7 @@ pub async fn start_session(
     println!("{:?}", general_config.lock().unwrap());
 
     let id = gen_rand_string(16);
-    let started_at = get_current_datetime().to_rfc2822();
+    let started_at = get_current_datetime().to_rfc3339();
 
     *session.lock().unwrap() = Session {
         id: id.clone(),
@@ -158,8 +158,8 @@ pub async fn stop_session(
 
     session_rx.send(()).unwrap();
     // std::thread::yield_now();
-    session.lock().unwrap().ended_at = Some(get_current_datetime().to_rfc2822());
-    // session.lock().unwrap().ended_at = Some(get_current_datetime().to_rfc2822());
+    session.lock().unwrap().ended_at = Some(get_current_datetime().to_rfc3339());
+    // session.lock().unwrap().ended_at = Some(get_current_datetime().to_rfc3339());
     session.lock().unwrap().is_running = false;
 
     let state = app_handle.state::<SessionState>().lock().unwrap().clone();
@@ -235,156 +235,28 @@ pub fn get_auth(auth_config: State<'_, AuthConfig>) -> Result<Option<Auth>, Stri
     Ok(auth)
 }
 
+
 #[tauri::command]
 pub fn webcam_capture(
     general_config: State<'_, GeneralConfig>,
     selected_device: State<'_, SelectedDevice>,
 ) -> Result<(), String> {
-    let config = general_config.lock().unwrap().clone();
+    let device = selected_device.lock().unwrap().clone();
+    let config = general_config.lock().unwrap();
+    let save_path = storage::data_path().join(config.media_storage_dir.clone());
 
-    let is_granted = nokhwa::nokhwa_check();
-    if !is_granted {
-        println!("Permission not granted: {is_granted}");
-        return Err("Permission required!".into());
-    }
-
-    let backend = native_api_backend().unwrap();
-    let devices = nokhwa::query(backend).unwrap();
-    println!("There are {} available cameras.", devices.len());
-    for device in devices {
-        println!("{device}");
-    }
-
-    // first camera in system
-    let index = selected_device.lock().unwrap().clone().index().clone(); // CameraIndex::Index(0);
-                                                                         // request the absolute highest resolution CameraFormat that can be decoded to RGB.
-                                                                         // let resolution = Resolution::new(1920, 1080);
-
-    let f_format = FrameFormat::RAWRGB;
-    let fps = 30;
-    // let resolution = Resolution::new(720, 480);
-    let resolution = Resolution::new(1280, 720);
-    let camera_format = CameraFormat::new(resolution, f_format, fps);
-
-    let requested = RequestedFormat::new::<pixel_format::RgbFormat>(
-        RequestedFormatType::AbsoluteHighestResolution
-    );
-
-    println!("Camera {:?} Request {:?}", &index, &requested);
-    // make the camera
-    let mut camera = Camera::new(index, requested).unwrap();
-
-    camera.open_stream().unwrap();
-
-    // get a frame
-    println!(
-        "Frame format: {:?}, camera_format: {:?}",
-        camera.frame_format(),
-        camera.camera_format()
-    );
-    let frame = camera.frame().unwrap();
-    camera.stop_stream().unwrap();
-    println!("Captured Single Frame of {}", frame.buffer().len());
-
-    let path = storage::data_path().join(
-        config
-            .media_storage_dir
-            .clone()
-            .join("custom_image.jpg"),
-    );
-    match convert_buffer_to_image(frame.clone()) {
-        Ok(image) => {
-            if let Err(err) = image.save(path) {
-                println!("Error saving webcam image {:?}", err);
+    tauri::async_runtime::spawn(async move {
+        if let Err(err) = CameraController::
+            take_snapshot(
+                crate::CameraSnapshotOptions {
+                    save_path,
+                    selected_device: device.human_name() }
+            ).await {
+                eprint!("CameraController Error: {:?}", err);
             }
-        }
-        Err(err) => {
-            println!("Error saving webcam image {:?}", err);
-        }
-    };
-
-    // // bits per pixel = 2457600 * 8 / (1280 * 960) = 16
-    // let bits_per_pixel = (frame.buffer().len() as u32) * 8
-    //     / (frame.resolution().width() * frame.resolution().height());
-    // println!("BITS PER PIXEL {bits_per_pixel}");
-
-    // // use encoder
-    // let yuyv422_frame = uyvy422_frame(frame.buffer(), frame.resolution().width(), frame.resolution().height());
-    // let yuyv422_path = storage::data_path().join(config.media_storage_dir.clone().join("yuyv422.yuv"));
-    // std::fs::write(yuyv422_path, yuyv422_frame.data(0)).unwrap();
-
-    // let path = storage::data_path().join(config.media_storage_dir.clone().join("frame.raw"));
-    // let yuv_path = storage::data_path().join(config.media_storage_dir.clone().join("frame.uyvy"));
-    // let file = std::fs::File::create(path.clone());
-    // if file.is_ok() {
-    //     std::fs::write(path, frame.buffer()).unwrap();
-    //     std::fs::write(yuv_path, frame.buffer()).unwrap();
-    // }
-
-    // decode into an ImageBuffer
-    let decoded = frame.decode_image::<pixel_format::RgbFormat>().unwrap();
-    // let converted = convert_buffer_to_image(&decoded.into_raw().to_vec());
-    println!("Decoded Frame of {}", decoded.len());
-    // std::fs::File::create(&path).expect("Cannot not save webcam image");
-    let path = storage::data_path().join(config.media_storage_dir.clone().join("webcam.jpeg"));
-    if let Err(err) = decoded.save(path) {
-        println!("Error saving webcam image {:?}", err);
-    }
+    });
 
     Ok(())
-}
-
-fn convert_buffer_to_image(
-    buffer: nokhwa::Buffer,
-) -> Result<ImageBuffer<Rgb<u8>, Vec<u8>>, NokhwaError> {
-    let Resolution {
-        width_x: width,
-        height_y: height,
-    } = buffer.resolution();
-    let mut image_buffer = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(width, height);
-    let data = buffer.buffer();
-
-    for (y, chunk) in data
-        .chunks_exact((width * 2) as usize)
-        .enumerate()
-        .take(height as usize)
-    {
-        for (x, pixel) in chunk.chunks_exact(4).enumerate() {
-            let [u, y1, v, y2] = [
-                pixel[0] as f32,
-                pixel[1] as f32,
-                pixel[2] as f32,
-                pixel[3] as f32,
-            ];
-            let x = (x * 2) as u32;
-            image_buffer.put_pixel(x, y as u32, yuv_to_rgb(y1, u, v));
-            image_buffer.put_pixel(x + 1, y as u32, yuv_to_rgb(y2, u, v));
-        }
-    }
-
-    Ok(image_buffer)
-}
-
-//YUV to RGB conversion BT.709
-fn yuv_to_rgb(y: f32, u: f32, v: f32) -> Rgb<u8> {
-    let r = y + 1.5748 * (v - 128.0);
-    let g = y - 0.1873 * (u - 128.0) - 0.4681 * (v - 128.0);
-    let b = y + 1.8556 * (u - 128.0);
-
-    Rgb([r as u8, g as u8, b as u8])
-}
-
-fn yuv_to_rgb_bt709(y: f32, u: f32, v: f32) -> Rgb<u8> {
-    let y = y as f32;
-    let u = (u as f32) - 128.0;
-    let v = (v as f32) - 128.0;
-
-    let r = (y + 1.5748 * v).round().clamp(0.0, 255.0) as u8;
-    let g = (y - 0.187324 * u - 0.468124 * v).round().clamp(0.0, 255.0) as u8;
-    let b = (y + 1.8556 * u).round().clamp(0.0, 255.0) as u8;
-
-    // (r, g, b)
-    Rgb([r, g, b])
 }
 
 #[tauri::command]
