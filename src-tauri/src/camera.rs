@@ -98,7 +98,7 @@ impl CameraController {
         println!("Captured Single Frame of {}", frame.buffer().len());
 
         let path = options.save_path.join(
-            format!("{}-{}-{}.{}", "webcam_debug", &id, get_current_datetime().to_rfc3339(), "jpg")
+            format!("{}_{}_{}.{}", "webcam_debug", &id, get_current_datetime().to_rfc3339(), "jpg")
         );
         match convert_buffer_to_image(frame.clone()) {
             Ok(image) => {
@@ -116,7 +116,7 @@ impl CameraController {
         println!("Decoded Frame of {}", decoded.len());
 
         let path = options.save_path.join(
-            format!("{}-{}-{}.{}", "webcam", {id}, get_current_datetime().to_rfc3339(), "jpg")
+            format!("{}_{}_{}.{}", "webcam", {id}, get_current_datetime().to_rfc3339(), "jpg")
         );
         if let Err(err) = decoded.save(path) {
             println!("Error saving webcam image {:?}", err);

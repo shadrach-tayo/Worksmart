@@ -134,9 +134,8 @@ pub async fn start_session(
         println!("Close session#start thread");
     });
 
-    // drop(session);
+    // dbg!(get_focused_window());
 
-    println!("Lock dropped");
     Ok(Some(SessionDetail {
         id,
         started_at,

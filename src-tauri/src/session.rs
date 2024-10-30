@@ -4,6 +4,7 @@ use std::{
     time::Duration,
 };
 
+use active_win_pos_rs::get_active_window;
 // use chrono::{DateTime, Utc};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
@@ -11,12 +12,19 @@ use tauri::{AppHandle, Manager};
 use tokio::sync::broadcast;
 use xcap::Monitor;
 
-use crate::{gen_rand_string, get_current_datetime, storage, AppState, CameraController, CameraSnapshotOptions, GeneralConfig, SelectedDevice, Shutdown};
+use crate::{gen_rand_string, get_current_datetime, get_focused_window, storage, AppState, CameraController, CameraSnapshotOptions, GeneralConfig, SelectedDevice, Shutdown};
 
 pub type SessionChannel = tokio::sync::broadcast::Sender<()>;
 pub type SessionState = Arc<Mutex<Session>>;
 
 pub type DateTimeTz = String;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WindowEntry {
+    name: String,
+    title: String,
+    time: String,
+}
 
 #[derive(Debug, Clone)]
 pub struct Session {
@@ -34,7 +42,7 @@ pub struct TimeCapsule {
     pub session_id: String,
     pub mouse_clicks: Arc<RwLock<Vec<DateTimeTz>>>,
     pub keystrokes: Arc<RwLock<Vec<DateTimeTz>>>,
-    // pub media: Arc<RwLock<Vec<String>>>,
+    pub windows: Arc<RwLock<Vec<WindowEntry>>>,
     pub started_at: String,
     pub ended_at: Option<String>,
     pub storage_path: PathBuf,
@@ -47,7 +55,7 @@ pub struct StorageTimeCapsule {
     pub session_id: String,
     pub mouse_clicks: Vec<DateTimeTz>,
     pub keystrokes: Vec<DateTimeTz>,
-    // pub media: Vec<String>,
+    pub windows: Vec<WindowEntry>,
     pub started_at: String,
     pub ended_at: Option<String>,
 }
@@ -75,10 +83,11 @@ impl Session {
                 session_id: self.id.clone(),
                 mouse_clicks: Arc::new(RwLock::new(vec![])),
                 keystrokes: Arc::new(RwLock::new(vec![])),
-                // media: Arc::new(RwLock::new(vec![])),
+                windows: Arc::new(RwLock::new(vec![])),
                 started_at: get_current_datetime().to_rfc2822(),
                 ended_at: None,
                 exited: Arc::new(AtomicBool::new(false)),
+
             };
 
             let capsule_id = time_capsule.id.clone();
@@ -149,6 +158,13 @@ impl TimeCapsule {
         shutdown: Shutdown,
     ) -> crate::Result<bool> {
         let state = app_handle.state::<AppState>();
+        let time_gap_in_secs = app_handle
+            .state::<GeneralConfig>()
+            .lock()
+            .unwrap()
+            .preferences
+            .time_gap_duration_in_seconds;
+
         let mut mouse_click_rx = state.mouseclick_rx.as_ref().unwrap().subscribe();
         let mut keystroke_rx = state.keystroke_rx.as_ref().unwrap().subscribe();
 
@@ -208,14 +224,43 @@ impl TimeCapsule {
         };
         tokio::spawn(listen_for_keystrokes);
 
+        let exited = self.exited.clone();
+        // let mut active_windows = Arc::new(Mutex::new(vec![]));
+        let active_windows = Arc::clone(&self.windows);
+        let log_delay_in_seconds = time_gap_in_secs / 10;
+        let active_window_logger = async move {
+            // initial 10 secs delay before tracking active window
+            tokio::time::sleep(Duration::from_secs(10)).await;
+
+            let mut active_window = get_focused_window();
+
+            if active_window.is_some() {
+                let win = active_window.clone().unwrap();
+                active_windows
+                    .write()
+                    .unwrap()
+                    .push(WindowEntry { name: win.app_name, title: win.title, time: get_current_datetime().to_rfc3339() });
+            }
+
+            while !exited.load(sync::atomic::Ordering::SeqCst) {
+                tokio::time::sleep(Duration::from_secs(log_delay_in_seconds)).await;
+                if let Some(window) = get_focused_window() {
+                    if active_window.is_some() && active_window.clone().unwrap().app_name != window.app_name.as_str() {
+                        active_window = Some(window.clone());
+                        active_windows
+                            .write()
+                            .unwrap()
+                            .push(WindowEntry { name: window.app_name, title: window.title, time: get_current_datetime().to_rfc3339() });
+                    }
+                }
+
+            }
+        };
+        tokio::spawn(active_window_logger);
+
         let storage_path = Arc::new(self.storage_path.clone());
 
-        let time_gap_in_secs = app_handle
-            .state::<GeneralConfig>()
-            .lock()
-            .unwrap()
-            .preferences
-            .time_gap_duration_in_seconds;
+
         let max_delay_based_on_capture_lag = time_gap_in_secs - MEDIA_CAPTURE_LAG;
         let min_capture_start_time = time_gap_in_secs / 10;
         let delay = {
@@ -223,8 +268,7 @@ impl TimeCapsule {
             gen.gen_range(min_capture_start_time..=max_delay_based_on_capture_lag)
         };
 
-        // let screenshots = Arc::clone(&self.media);
-        // let capsule_id = self.id.clone();
+
         let media_storage_path = Arc::clone(&storage_path);
         let capsule_exited = self.exited.clone();
         tokio::spawn(async move {
@@ -235,68 +279,35 @@ impl TimeCapsule {
             }
 
             let monitors = Monitor::all().unwrap();
+            let focused_window = match get_focused_window() {
+                Some(w) => w.app_name,
+                None => "".to_owned()
+            };
+
             for monitor in monitors {
                 let image = monitor.capture_image().unwrap();
-                // let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+
+                let window_name = if focused_window.is_empty() {
+                    monitor.name()
+                } else {
+                    &focused_window
+                };
+
                 let img_path = media_storage_path.clone().join(format!(
-                    "screenshot-{}-{}.png",
+                    "screenshot_{}_{}.png",
+                    window_name,
                     get_current_datetime().to_rfc3339(),
-                    // todo: use active window name
-                    monitor.name(),
                 ));
 
                 let file = tokio::fs::File::create(img_path.clone()).await;
 
                 if file.is_ok() {
                     image.save(&img_path).unwrap();
-                    // screenshots
-                    //     .write()
-                    //     .unwrap()
-                    //     .push(img_path.to_str().unwrap().to_owned());
                 } else {
                     // save to error log and stream to server later
                     println!("Error saving screenshot to dir: {:?}", img_path);
                 }
             }
-
-            // println!(
-            //     "Screencapture Done: {:?}, media: {:?}",
-            //     start.elapsed(),
-            //     screenshots.read().unwrap()
-            // );
-
-            // let windows = XcapWindow::all().unwrap();
-
-            // let start = Instant::now();
-            // for window in windows {
-            //     if window.is_minimized() {
-            //         continue;
-            //     }
-
-            //     println!(
-            //         "Window: {:?} {:?} {:?}",
-            //         window.title(),
-            //         (window.x(), window.y(), window.width(), window.height()),
-            //         (window.is_minimized(), window.is_maximized())
-            //     );
-
-            //     let image = window.capture_image().unwrap();
-            //     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-            //     let img_path = storage_path.clone().join(format!(
-            //         "{}-{}.png",
-            //         timestamp.as_nanos(),
-            //         normalized(window.title()),
-            //     ));
-
-            //     let file = fs::File::create(img_path.clone()).await;
-            //     println!("PreSave: {:?}, Exists: {}", &img_path, file.is_ok());
-            //     image.save(&img_path).unwrap();
-            //     media_session
-            //         .lock()
-            //         .unwrap()
-            //         .push(img_path.to_str().unwrap().to_owned());
-            // }
-            // println!("Windows Capture Done: {:?}", start.elapsed());
         });
 
         let selected_device = app_handle.state::<SelectedDevice>().lock().unwrap().clone().human_name();
@@ -354,7 +365,7 @@ async fn save_capsule(time_capsule: TimeCapsule) -> crate::Result<()> {
 
     let TimeCapsule {
         id,
-        // media,
+        windows,
         ended_at,
         started_at,
         session_id,
@@ -370,7 +381,7 @@ async fn save_capsule(time_capsule: TimeCapsule) -> crate::Result<()> {
         ended_at,
         started_at,
         session_id,
-        // media: media.read().unwrap().clone(),
+        windows: windows.read().unwrap().clone(),
         mouse_clicks: mouse_clicks.read().unwrap().clone(),
         keystrokes: keystrokes.read().unwrap().clone(),
     };
