@@ -33,7 +33,7 @@ use xcap::{Monitor, Window as XcapWindow};
 use yuv::convert::ToRGB;
 
 // use crate::encoder::uyvy422_frame;
-use crate::{storage, windows, Auth, AuthConfig, CameraController, Configuration, SelectedDevice};
+use crate::{storage, windows, AppWindow, Auth, AuthConfig, CameraController, Configuration, SelectedDevice};
 
 use crate::{
     configuration, gen_rand_string, get_current_datetime,
@@ -266,12 +266,12 @@ pub fn login(
 ) -> Result<(), String> {
     println!("Login: {:?}", &payload);
     let handle = window.app_handle();
-    windows::close_login(&handle).map_err(|err| err.to_string())?;
+    windows::close_login(&handle);
 
     *auth_config.lock().unwrap() = Some(payload.clone());
     storage::save_to_path(&payload, storage::auth_path::<Auth>()).map_err(|err| err.to_string())?;
 
-    windows::show_tracker(&handle).map_err(|err| err.to_string())?;
+    windows::show_tracker(&handle);
 
     Ok(())
 }
@@ -282,27 +282,16 @@ pub struct ShowWindowPayload {
 }
 
 #[tauri::command]
-pub fn show_window(window: Window, name: String) -> Result<(), String> {
-    if let Some(window) = window.app_handle().get_window(&name) {
-        window
-            .show()
-            .map_err(|err| format!("Error showing window: {err}"))?;
-        return Ok(());
-    }
-
+pub fn show_window(app: AppHandle, name: String) -> Result<(), String> {
+    let window = AppWindow::from_label(&name);
+    window.show(&app).ok();
     Ok(())
 }
 
 #[tauri::command]
-pub fn hide_window(window: Window, name: String) -> Result<(), String> {
-    if let Some(window) = window.app_handle().get_window(&name) {
-        window
-            .hide()
-            .map_err(|err| format!("Error closing window: {err}"))?;
-        return Ok(());
-    }
-
-    Ok(())
+pub fn hide_window(window: Window, _name: String) {
+    // let window = AppWindow::from_label(&name);
+    window.hide().ok();
 }
 
 #[tauri::command]

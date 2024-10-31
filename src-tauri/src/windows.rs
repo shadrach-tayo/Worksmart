@@ -1,91 +1,257 @@
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, Runtime, Wry, Window};
 
-pub fn show_login(app: &AppHandle) -> crate::Result<()> {
-    if let Some(auth_window) = app.get_window("login") {
-        auth_window.show().unwrap();
-        return Ok(());
-    }
-
-    Ok(())
+pub enum AppWindow {
+    Login,
+    Track,
+    TimeCard,
+    Settings,
+    Permissions
 }
 
-pub fn close_login(app: &AppHandle) -> crate::Result<()> {
-    if let Some(auth_window) = app.get_window("login") {
-        auth_window.close().unwrap();
-        return Ok(());
+impl AppWindow {
+    pub fn label(&self) -> String {
+        match self {
+            AppWindow::Login => "login".to_string(),
+            AppWindow::Track => "track".to_string(),
+            AppWindow::TimeCard => "time-card".to_string(),
+            AppWindow::Settings => "settings".to_string(),
+            AppWindow::Permissions => "permissions".to_string(),
+        }
     }
 
-    Ok(())
-}
-
-pub fn show_tracker(app: &AppHandle) -> crate::Result<()> {
-    if let Some(auth_window) = app.get_window("track") {
-        auth_window.show().unwrap();
-        return Ok(());
+    pub fn title(&self) -> String {
+        match self {
+            AppWindow::Login => "login".to_string(),
+            AppWindow::Track => "track".to_string(),
+            AppWindow::TimeCard => "time card".to_string(),
+            AppWindow::Settings => "settings".to_string(),
+            AppWindow::Permissions => "permissions".to_string(),
+        }
     }
 
-    Ok(())
-}
-
-pub fn close_tracker(app: &AppHandle) -> crate::Result<()> {
-    if let Some(auth_window) = app.get_window("track") {
-        auth_window.close().unwrap();
-        return Ok(());
+    pub fn from_label(label: &str) -> Self {
+        match label {
+            "login" => AppWindow::Login,
+            "track" => AppWindow::Track,
+            "time-card" => AppWindow::TimeCard,
+            "settings" => AppWindow::Settings,
+            "permissions" => AppWindow::Permissions,
+            _ => unreachable!("unknown window: {label}")
+        }
     }
 
-    Ok(())
-}
-
-pub fn show_settings(app: &AppHandle) -> crate::Result<()> {
-    if let Some(auth_window) = app.get_window("settings") {
-        auth_window.show().unwrap();
-        return Ok(());
+    pub fn get(&self, app: &AppHandle<Wry>) -> Option<Window> {
+        let label = self.label();
+        app.get_window(&label)
     }
 
-    Ok(())
-}
+    pub fn show(&self, app: &AppHandle<Wry>) -> tauri::Result<Window<Wry>> {
+        let label = self.label();
 
-pub fn close_settings(app: &AppHandle) -> crate::Result<()> {
-    if let Some(auth_window) = app.get_window("settings") {
-        auth_window.close().unwrap();
-        return Ok(());
+        if let Some(window) = app.get_window(&label) {
+            window.show().ok();
+            window.set_focus().ok();
+            return Ok(window);
+        }
+
+        Ok(match self {
+            AppWindow::Login => {
+                tauri::WindowBuilder::new(app, label, tauri::WindowUrl::App("/login".into()))
+                    .center()
+                    .title(self.title())
+                    .hidden_title(true)
+                    .maximizable(false)
+                    .minimizable(false)
+                    .maximized(false)
+                    .resizable(false)
+                    .inner_size(420.0, 420.0)
+                    // .decorations(false)
+                    .title_bar_style(tauri::TitleBarStyle::Overlay)
+                    .theme(Some(tauri::Theme::Dark))
+                    .build()?
+            },
+            AppWindow::Track => {
+                tauri::WindowBuilder::new(app, label, tauri::WindowUrl::App("/track".into()))
+                    .center()
+                    .title(self.title())
+                    .hidden_title(true)
+                    .maximizable(false)
+                    .maximized(false)
+                    .resizable(false)
+                    .always_on_top(true)
+                    .inner_size(463.0, 220.0)
+                    .decorations(false)
+                    .title_bar_style(tauri::TitleBarStyle::Overlay)
+                    .theme(Some(tauri::Theme::Dark))
+                    .build()?
+            },
+            AppWindow::TimeCard => {
+                tauri::WindowBuilder::new(app, label, tauri::WindowUrl::App("/timecard".into()))
+                    .center()
+                    .title(self.title())
+                    .hidden_title(true)
+                    .maximizable(false)
+                    .minimizable(false)
+                    .maximized(false)
+                    .resizable(false)
+                    .inner_size(503.0, 233.0)
+                    .title_bar_style(tauri::TitleBarStyle::Overlay)
+                    .theme(Some(tauri::Theme::Dark))
+                    .build()?
+            },
+            AppWindow::Settings => {
+                tauri::WindowBuilder::new(app, label, tauri::WindowUrl::App("/settings".into()))
+                    .center()
+                    .title(self.title())
+                    .hidden_title(true)
+                    .maximizable(false)
+                    .minimizable(false)
+                    .maximized(false)
+                    .resizable(false)
+                    .inner_size(460.0, 620.0)
+                    // .decorations(false)
+                    .title_bar_style(tauri::TitleBarStyle::Overlay)
+                    .theme(Some(tauri::Theme::Dark))
+                    .build()?
+            },
+            AppWindow::Permissions => {
+                tauri::WindowBuilder::new(app, label, tauri::WindowUrl::App("/permissions".into()))
+                    .center()
+                    .title(self.title())
+                    .hidden_title(true)
+                    .maximizable(false)
+                    .minimizable(false)
+                    .maximized(false)
+                    .resizable(false)
+                    .inner_size(420.0, 420.0)
+                    .title_bar_style(tauri::TitleBarStyle::Overlay)
+                    .theme(Some(tauri::Theme::Dark))
+                    .build()?
+            },
+        })
     }
 
-    Ok(())
-}
-
-pub fn show_timecard(app: &AppHandle) -> crate::Result<()> {
-    if let Some(auth_window) = app.get_window("timecard") {
-        auth_window.show().unwrap();
-        return Ok(());
+    pub fn close(&self, app: &AppHandle<Wry>) {
+        if let Some(window) = app.get_window(&self.label()) {
+            tauri::async_runtime::spawn(async move {
+                window.close().ok();
+            });
+        }
     }
-
-    Ok(())
 }
 
-pub fn close_timecard(app: &AppHandle) -> crate::Result<()> {
-    if let Some(auth_window) = app.get_window("timecard") {
-        auth_window.close().unwrap();
-        return Ok(());
-    }
-
-    Ok(())
+pub fn show_login(app: &AppHandle) {
+    (AppWindow::Login).show(app).ok();
 }
 
-pub fn show_window(app: &AppHandle, name: String) -> crate::Result<()> {
-    if let Some(window) = app.get_window(&name) {
-        window.show().unwrap();
-        return Ok(());
-    }
-
-    Ok(())
+pub fn close_login(app: &AppHandle) {
+    AppWindow::Login.close(app)
 }
 
-pub fn hide_window(app: &AppHandle, name: String) -> crate::Result<()> {
-    if let Some(window) = app.get_window(&name) {
-        window.close().unwrap();
-        return Ok(());
-    }
-
-    Ok(())
+pub fn show_tracker(app: &AppHandle) {
+    (AppWindow::Track).show(app).ok();
 }
+
+pub fn close_tracker(app: &AppHandle) {
+    (AppWindow::Track).close(app);
+}
+
+pub fn show_settings(app: &AppHandle) {
+    (AppWindow::Settings).show(app).ok();
+}
+
+pub fn close_settings(app: &AppHandle) {
+    (AppWindow::Settings).close(app);
+}
+
+pub fn show_timecard(app: &AppHandle) {
+    (AppWindow::TimeCard).show(app).ok();
+}
+
+pub fn close_timecard(app: &AppHandle) {
+    (AppWindow::TimeCard).close(app);
+}
+
+// pub fn show_window(app: &AppHandle, name: String) -> crate::Result<()> {
+//     if let Some(window) = app.get_window(&name) {
+//         window.show().unwrap();
+//         return Ok(());
+//     }
+
+//     Ok(())
+// }
+
+// pub fn hide_window(app: &AppHandle, name: String) -> crate::Result<()> {
+//     if let Some(window) = app.get_window(&name) {
+//         window.close().unwrap();
+//         return Ok(());
+//     }
+
+//     Ok(())
+// }
+
+
+// {
+//   "title": "main",
+//   "width": 600,
+//   "height": 300,
+//   "resizable": false,
+//   "visible": false
+// },
+// {
+//   "label": "login",
+//   "fullscreen": false,
+//   "resizable": false,
+//   "maximizable": false,
+//   "title": "Login",
+//   "width": 420,
+//   "height": 420,
+//   "decorations": false,
+//   "alwaysOnTop": false,
+//   "contentProtected": true,
+//   "visible": false,
+//   "url": "/login"
+// },
+// {
+//   "label": "settings",
+//   "fullscreen": false,
+//   "resizable": false,
+//   "maximizable": false,
+//   "title": "Settings",
+//   "decorations": false,
+//   "alwaysOnTop": false,
+//   "contentProtected": true,
+//   "visible": false,
+//   "url": "/settings",
+//   "width": 460,
+//   "height": 620
+// },
+// {
+//   "label": "timecard",
+//   "fullscreen": false,
+//   "resizable": false,
+//   "maximizable": false,
+//   "title": "Timecard",
+//   "decorations": false,
+//   "alwaysOnTop": false,
+//   "contentProtected": true,
+//   "visible": false,
+//   "url": "/timecard",
+//   "width": 503,
+//   "height": 233
+// },
+// {
+//   "label": "track",
+//   "fullscreen": false,
+//   "resizable": false,
+//   "maximizable": false,
+//   "title": "Track",
+//   "decorations": false,
+//   "alwaysOnTop": false,
+//   "contentProtected": true,
+//   "visible": false,
+//   "url": "/track",
+//   "width": 463,
+//   "height": 220
+// }
+//

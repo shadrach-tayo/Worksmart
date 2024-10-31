@@ -157,9 +157,9 @@ async fn main() {
         })
         .setup(|app| {
             if app.app_handle().state::<AuthConfig>().lock().unwrap().is_none() {
-                windows::show_login(&app.app_handle()).unwrap();
+                windows::show_login(&app.app_handle());
             } else {
-                windows::show_tracker(&app.app_handle()).unwrap()
+                windows::show_tracker(&app.app_handle());
             }
 
             // let media_data_clone = media_data.clone();
