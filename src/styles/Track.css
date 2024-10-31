@@ -1,6 +1,7 @@
 body {
-    color: #e1e1e1;
+    /* color: #e1e1e1; */
     background: transparent;
+    background-color: transparent;
 }
 
 .wrapper {
@@ -91,21 +92,9 @@ body {
     border: solid 6px #34c759;
 }
 
-/* .stop-button:hover {
-    border: solid 6px red;
-}
-.stop-button:hover > * {
-    fill: red;
-} */
-
-/* .stop-button .bi-square-fill {
-    font-size: 15px;
-    color: #34c759;
-} */
-
 .tracker-menu {
     position: absolute;
-    bottom: -40px;
+    bottom: -35px;
     right: 20px;
     background-color: #121117;
     border-radius: 0 0 10px 10px;
@@ -140,4 +129,9 @@ body {
 
 .icon-btn:disabled:hover > svg {
     stroke: gray;
+}
+
+.timer {
+    font-size: 18px;
+    font-weight: 700;
 }

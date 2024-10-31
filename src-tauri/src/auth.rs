@@ -13,7 +13,7 @@ pub struct Auth {
 impl Default for Auth {
     fn default() -> Self {
         if let Ok(this) = storage::load_from_path::<Self>(storage::auth_path::<Self>()) {
-            println!("Loaded auth from path: {:?}", &this);
+            println!("Loaded auth from: {:?}", &this);
             return this;
         }
 

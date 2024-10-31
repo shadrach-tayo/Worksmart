@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, Runtime, Wry, Window};
+use tauri::{AppHandle, Manager, Wry, Window};
 
 pub enum AppWindow {
     Login,
@@ -64,8 +64,9 @@ impl AppWindow {
                     .minimizable(false)
                     .maximized(false)
                     .resizable(false)
-                    .inner_size(420.0, 420.0)
-                    // .decorations(false)
+                    .inner_size(380.0, 355.0)
+                    .transparent(true)
+                    .decorations(false)
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .theme(Some(tauri::Theme::Dark))
                     .build()?
@@ -78,9 +79,10 @@ impl AppWindow {
                     .maximizable(false)
                     .maximized(false)
                     .resizable(false)
-                    .always_on_top(true)
-                    .inner_size(463.0, 220.0)
+                    .inner_size(463.0, 213.0)
+                    .transparent(true)
                     .decorations(false)
+                    .always_on_top(true)
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .theme(Some(tauri::Theme::Dark))
                     .build()?
@@ -94,7 +96,9 @@ impl AppWindow {
                     .minimizable(false)
                     .maximized(false)
                     .resizable(false)
-                    .inner_size(503.0, 233.0)
+                    .transparent(true)
+                    .decorations(false)
+                    .inner_size(503.0, 183.0)
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .theme(Some(tauri::Theme::Dark))
                     .build()?
@@ -109,7 +113,7 @@ impl AppWindow {
                     .maximized(false)
                     .resizable(false)
                     .inner_size(460.0, 620.0)
-                    // .decorations(false)
+                    .transparent(true)
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .theme(Some(tauri::Theme::Dark))
                     .build()?
@@ -123,6 +127,7 @@ impl AppWindow {
                     .minimizable(false)
                     .maximized(false)
                     .resizable(false)
+                    .transparent(true)
                     .inner_size(420.0, 420.0)
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .theme(Some(tauri::Theme::Dark))
