@@ -160,6 +160,7 @@ async fn main() {
                 windows::show_login(&app.app_handle());
             } else {
                 windows::show_tracker(&app.app_handle());
+                // windows::show_timecard(&app.app_handle());
             }
 
             // let media_data_clone = media_data.clone();

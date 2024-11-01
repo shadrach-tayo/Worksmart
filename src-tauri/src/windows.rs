@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, Wry, Window};
+use tauri::{AppHandle, Manager, PhysicalPosition, Window, Wry};
 
 pub enum AppWindow {
     Login,
@@ -72,7 +72,7 @@ impl AppWindow {
                     .build()?
             },
             AppWindow::Track => {
-                tauri::WindowBuilder::new(app, label, tauri::WindowUrl::App("/track".into()))
+                let window = tauri::WindowBuilder::new(app, label, tauri::WindowUrl::App("/track".into()))
                     .center()
                     .title(self.title())
                     .hidden_title(true)
@@ -85,10 +85,22 @@ impl AppWindow {
                     .always_on_top(true)
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .theme(Some(tauri::Theme::Dark))
-                    .build()?
+                    .build()?;
+
+                if let Some(monitor) = window.current_monitor()? {
+                    window.set_position(
+                        // bottom right position
+                        PhysicalPosition {
+                                x: (monitor.size().width as f64) - 463.0 * monitor.scale_factor(), // right
+                                y: (monitor.size().height as f64) - (213.0 * monitor.scale_factor()) - 50.0 // bottom
+                        }
+                    )?;
+                }
+
+                window
             },
             AppWindow::TimeCard => {
-                tauri::WindowBuilder::new(app, label, tauri::WindowUrl::App("/timecard".into()))
+                let window = tauri::WindowBuilder::new(app, label, tauri::WindowUrl::App("/timecard".into()))
                     .center()
                     .title(self.title())
                     .hidden_title(true)
@@ -98,10 +110,23 @@ impl AppWindow {
                     .resizable(false)
                     .transparent(true)
                     .decorations(false)
+                    .always_on_top(true)
                     .inner_size(503.0, 183.0)
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .theme(Some(tauri::Theme::Dark))
-                    .build()?
+                    .build()?;
+
+                if let Some(monitor) = window.current_monitor()? {
+                    window.set_position(
+                        // top right position
+                        PhysicalPosition {
+                                x: (monitor.size().width as f64) - 503.0 * monitor.scale_factor(), // right
+                                y: 100.0 // top
+                        }
+                    )?;
+                }
+
+                window
             },
             AppWindow::Settings => {
                 tauri::WindowBuilder::new(app, label, tauri::WindowUrl::App("/settings".into()))
