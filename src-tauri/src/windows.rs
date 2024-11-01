@@ -79,7 +79,7 @@ impl AppWindow {
                     .maximizable(false)
                     .maximized(false)
                     .resizable(false)
-                    .inner_size(463.0, 213.0)
+                    .inner_size(463.0, 220.0)
                     .transparent(true)
                     .decorations(false)
                     .always_on_top(true)
@@ -92,7 +92,7 @@ impl AppWindow {
                         // bottom right position
                         PhysicalPosition {
                                 x: (monitor.size().width as f64) - 463.0 * monitor.scale_factor(), // right
-                                y: (monitor.size().height as f64) - (213.0 * monitor.scale_factor()) - 50.0 // bottom
+                                y: (monitor.size().height as f64) - (220.0 * monitor.scale_factor()) - 50.0 // bottom
                         }
                     )?;
                 }

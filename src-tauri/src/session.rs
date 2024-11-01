@@ -1,10 +1,8 @@
 use std::{
-    path::PathBuf,
-    sync::{self, atomic::AtomicBool, Arc, Mutex, RwLock},
-    time::Duration,
+    path::PathBuf, sync::{self, atomic::AtomicBool, Arc, Mutex, RwLock}, time::Duration
 };
 
-use active_win_pos_rs::get_active_window;
+use chrono::Utc;
 // use chrono::{DateTime, Utc};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
@@ -12,7 +10,7 @@ use tauri::{AppHandle, Manager};
 use tokio::sync::broadcast;
 use xcap::Monitor;
 
-use crate::{gen_rand_string, get_current_datetime, get_focused_window, storage, AppState, CameraController, CameraSnapshotOptions, GeneralConfig, SelectedDevice, Shutdown};
+use crate::{gen_rand_string, get_current_datetime, get_focused_window, storage, AppState, CameraController, CameraSnapshotOptions, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap};
 
 pub type SessionChannel = tokio::sync::broadcast::Sender<()>;
 pub type SessionState = Arc<Mutex<Session>>;
@@ -66,6 +64,7 @@ impl Session {
 
         let mut shutdown = Shutdown::new(self.notify_shutdown.subscribe());
         let mut is_shutdown = false;
+
         while !is_shutdown {
             let id = gen_rand_string(16);
             let dir =  app.state::<GeneralConfig>()
@@ -96,6 +95,8 @@ impl Session {
                 capsule_id
             );
 
+            let start_ts = Utc::now().timestamp() as u64;
+
             tokio::select! {
                 res = time_capsule
                     .record(app.clone(), Shutdown::new(self.notify_shutdown.subscribe())) => {
@@ -122,11 +123,25 @@ impl Session {
             }
 
             time_capsule.exit();
+
+            let handle = app.clone();
+            // let start_ts = DateTime::parse_from_str(&time_capsule.started_at, "").unwrap().timestamp() as u64;
+            let end_ts = Utc::now().timestamp() as u64;
+ // time_capsule.ended_at.clone().map_or(Utc::now().timestamp() as u64, |end| DateTime::parse_from_str(&end, "").unwrap().timestamp() as u64);
+
             tokio::spawn(async move {
                 if let Err(err) = save_capsule(time_capsule).await {
                     println!("Couldn't save time capsule: {:?}", err);
                     // todo: log error to server and save to local error log
                 }
+
+                // let start_dt = DateTime::parse_from_str(&started_at, "").unwrap().timestamp() as u64;
+                // let end_dt = DateTime::parse_from_str(&started_at, "").unwrap().timestamp() as u64; //Utc::now().timestamp() as u64;
+                let diff = end_ts - start_ts;
+                dbg!(diff);
+                handle.state::<TimeTrackerMap>().lock().unwrap().increment_track_for_today(diff);
+                handle.state::<TimeTrackerMap>().lock().unwrap().save();
+
             });
 
             // self.time_capsules.push(time_capsule);

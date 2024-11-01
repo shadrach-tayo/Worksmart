@@ -3,7 +3,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, Utc};
 use chrono_tz::Tz;
 
 pub fn with_local_timezone(date_time: DateTime<Utc>) -> DateTime<Tz> {
@@ -15,6 +15,11 @@ pub fn with_local_timezone(date_time: DateTime<Utc>) -> DateTime<Tz> {
 pub fn get_current_datetime() -> DateTime<Utc> {
     let dt = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     DateTime::from_timestamp(dt.as_secs() as i64, dt.subsec_nanos()).unwrap()
+}
+
+pub fn get_current_date() -> String {
+    let today = Utc::now();
+    format!("{}-{}-{}", today.year(), today.month(), today.day())
 }
 
 use rand::{thread_rng, Rng};

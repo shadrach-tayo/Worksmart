@@ -15,6 +15,7 @@ use nokhwa::{backends::capture::*, Camera};
 use nokhwa::{native_api_backend, pixel_format, NokhwaError};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::io::{Cursor, Read};
 use std::{
     io::Write,
@@ -32,6 +33,7 @@ use tokio::{fs, sync::broadcast, time};
 use xcap::{Monitor, Window as XcapWindow};
 use yuv::convert::ToRGB;
 
+use crate::time_map::{TimeTrackerMap, TrackHistory};
 // use crate::encoder::uyvy422_frame;
 use crate::{storage, windows, AppWindow, Auth, AuthConfig, CameraController, Configuration, SelectedDevice};
 
@@ -344,4 +346,18 @@ pub fn get_selected_camera_device(
     selected_device: State<'_, SelectedDevice>,
 ) -> Result<CameraInfo, String> {
     Ok(selected_device.lock().unwrap().clone())
+}
+
+#[tauri::command]
+pub fn get_track_history(
+    time_tracker: State<'_, TimeTrackerMap>,
+) -> Result<TrackHistory, String> {
+    Ok(time_tracker.lock().unwrap().clone())
+}
+
+#[tauri::command]
+pub fn get_time_tracked_today(
+    time_tracker: State<'_, TimeTrackerMap>,
+) -> Result<u64, String> {
+    Ok(time_tracker.lock().unwrap().get_track_for_today())
 }

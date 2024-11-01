@@ -13,6 +13,7 @@ pub mod utils;
 pub mod windows;
 pub mod encoder;
 pub mod screen_capture;
+pub mod time_map;
 
 pub use auth::*;
 pub use autostart::*;
@@ -28,3 +29,4 @@ pub use storage::{auth_path, config_path, get_storage_path, load, save, save_to_
 pub use utils::*;
 pub use windows::*;
 pub use screen_capture::get_focused_window;
+pub use time_map::*;

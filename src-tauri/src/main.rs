@@ -13,7 +13,11 @@ use rdev::{listen, Event, EventType};
 use tauri::{Manager, WindowEvent};
 
 use worksmart::{
-    autostart, commands, gen_rand_string, get_current_datetime, get_default_camera, get_storage_path, session::{SessionChannel, SessionState}, state::{KeystrokeBroadCaster, MouseclickBroadCaster}, windows, AppState, Auth, AuthConfig, CameraController, Configuration, GeneralConfig, RecordChannel, SelectedDevice, Session, Shutdown
+    autostart, commands, gen_rand_string, get_current_datetime, get_default_camera, get_storage_path,
+    session::{SessionChannel, SessionState},
+    state::{KeystrokeBroadCaster, MouseclickBroadCaster},
+    windows,
+    AppState, Auth, AuthConfig, CameraController, Configuration, GeneralConfig, RecordChannel, SelectedDevice, Session, Shutdown, TimeTrackerMap, TrackHistory
 };
 
 pub fn create_device_query_listener(mouseclick_rx: MouseclickBroadCaster, keystroke_rx: KeystrokeBroadCaster) {
@@ -116,6 +120,8 @@ async fn main() {
 
     let auth_config: AuthConfig = Arc::new(Mutex::new(auth_config));
 
+    let time_tracker: TimeTrackerMap = Arc::new(Mutex::new(TrackHistory::default()));
+
     let selected_device: SelectedDevice = Arc::new(Mutex::new(get_default_camera().unwrap()));
 
     let app = tauri::Builder::default()
@@ -128,6 +134,7 @@ async fn main() {
         .manage(session)
         .manage(general_config)
         .manage(auth_config)
+        .manage(time_tracker)
         .manage(selected_device)
         .invoke_handler(tauri::generate_handler![
             commands::start_session,
@@ -146,6 +153,8 @@ async fn main() {
             commands::minimize_window,
             commands::list_camera_devices,
             commands::select_camera_device,
+            commands::get_track_history,
+            commands::get_time_tracked_today
         ])
         .on_window_event(|event| {
             if let WindowEvent::CloseRequested { api, .. } = event.event() {
@@ -162,6 +171,9 @@ async fn main() {
                 windows::show_tracker(&app.app_handle());
                 // windows::show_timecard(&app.app_handle());
             }
+
+            // purge stale keys
+            app.state::<TimeTrackerMap>().lock().unwrap().clean_up();
 
             // let media_data_clone = media_data.clone();
             // let output_path = get_storage_path(&app.app_handle()).unwrap();

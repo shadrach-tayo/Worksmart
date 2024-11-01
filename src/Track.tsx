@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./styles/Track.css";
 import {
   X,
@@ -12,6 +12,7 @@ import {
 import { Session, User } from "./types";
 import {
   get_session,
+  get_time_tracked_today,
   get_user,
   minimize_window,
   show_window,
@@ -19,14 +20,20 @@ import {
   stop_session,
 } from "./ipc";
 import { open } from "@tauri-apps/api/shell";
+import { relativeTime } from "./helper";
 
 const Track = () => {
   const [user, setUser] = useState<User>();
   const [session, setSession] = useState<Session>();
+  const intervalRef = useRef<number>();
+  const [timeTrackedToday, setTimeTrackedToday] = useState<string>();
+
+  let isActive = session !== undefined && !session?.ended_at;
+  let isEnded = session !== undefined && session?.ended_at;
 
   const startSession = async () => {
     let session = await start_session();
-    console.log("start", session);
+    // console.log("start", session);
     setSession(session);
   };
 
@@ -49,10 +56,17 @@ const Track = () => {
     pullData();
   }, []);
 
-  let isActive = session !== undefined && !session?.ended_at;
-  let isEnded = session !== undefined && session?.ended_at;
+  const pollData = async () => {
+    const timestamp = await get_time_tracked_today();
+    setTimeTrackedToday(relativeTime(timestamp));
+  };
 
-  console.log("session", session);
+  useEffect(() => {
+    intervalRef.current = setInterval(pollData, 30);
+    return () => clearInterval(intervalRef.current);
+  }, []);
+
+  // console.log("session", session);
   return (
     <div data-tauri-drag-region className="tracker-card">
       <div className="d-flex flex-column gap-3">
@@ -75,36 +89,45 @@ const Track = () => {
           </div>
         </div>
         <div className="divider"></div>
-        <div className="d-flex justify-content-between">
-          <div className="tracker-details">
-            <Circle
-              fill={isActive ? "red" : "#3cbd0f"}
-              stroke="transparent"
-              size={14}
-            />
-            <div>
-              <h4>{user?.name}</h4>
-              {/* <Timer start="2024-10-06T23:30:49.786Z" />
-                            <Timer start="2024-10-06T05:00:00.000Z" /> */}
-              {isActive ? (
-                <Timer start={session?.started_at!} />
-              ) : isEnded ? (
-                <Timer start={session?.started_at!} end={session?.ended_at} />
-              ) : null}
+        <div>
+          <div className="d-flex justify-content-between">
+            <div className="tracker-details">
+              <Circle
+                fill={isActive ? "red" : "#3cbd0f"}
+                stroke="transparent"
+                size={14}
+              />
+              <div>
+                <h4>{user?.name}</h4>
+                {/* <Timer start="2024-10-06T23:30:49.786Z" />
+                              <Timer start="2024-10-06T05:00:00.000Z" /> */}
+                {isActive ? (
+                  <Timer start={session?.started_at!} />
+                ) : isEnded ? (
+                  <Timer start={session?.started_at!} end={session?.ended_at} />
+                ) : null}
+              </div>
             </div>
+            {isActive ? (
+              <button
+                className="action-button stop-button"
+                onClick={stopSession}
+              >
+                <Square fill="red" stroke="transparent" size={20} />
+              </button>
+            ) : (
+              <button
+                className="action-button start-button"
+                onClick={startSession}
+              >
+                <Play fill="#3cbd0f" stroke="transparent" size={28} />
+              </button>
+            )}
           </div>
-          {isActive ? (
-            <button className="action-button stop-button" onClick={stopSession}>
-              <Square fill="red" stroke="transparent" />
-            </button>
-          ) : (
-            <button
-              className="action-button start-button"
-              onClick={startSession}
-            >
-              <Play fill="#3cbd0f" stroke="transparent" />
-            </button>
-          )}
+          <div className="tracked-time">
+            <Circle fill={"#3cbd0f"} stroke="transparent" size={12} />
+            <p>Today: {timeTrackedToday}</p>
+          </div>
         </div>
       </div>
       <div className="tracker-menu">
