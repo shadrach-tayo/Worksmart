@@ -20,12 +20,14 @@ import {
   stop_session,
 } from "./ipc";
 import { open } from "@tauri-apps/api/shell";
+import { listen } from "@tauri-apps/api/event";
 import { relativeTime } from "./helper";
 
 const Track = () => {
   const [user, setUser] = useState<User>();
   const [session, setSession] = useState<Session>();
   const intervalRef = useRef<number>();
+  const eventRef = useRef<Function>();
   const [timeTrackedToday, setTimeTrackedToday] = useState<string>();
 
   let isActive = session !== undefined && !session?.ended_at;
@@ -48,12 +50,20 @@ const Track = () => {
     const user = await get_user();
     const session = await get_session();
 
+    console.log("pullData", { session, user });
+
     user && setUser(user);
     session && setSession(session);
   };
 
+  const listenForEvent = async () => {
+    eventRef.current = await listen("SessionEnded", pullData);
+  };
+
   useEffect(() => {
     pullData();
+    listenForEvent();
+    return () => eventRef.current?.();
   }, []);
 
   const pollData = async () => {

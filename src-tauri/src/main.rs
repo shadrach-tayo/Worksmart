@@ -3,7 +3,7 @@
 
 #![allow(unused_imports)]
 
-use std::sync::{atomic, Arc, Mutex};
+use std::sync::{atomic::{self, AtomicBool}, Arc, Mutex};
 use chrono::{DateTime, Utc};
 // use gst::prelude::*;
 
@@ -14,7 +14,7 @@ use tauri::{Manager, WindowEvent};
 
 use worksmart::{
     autostart, commands, gen_rand_string, get_current_datetime, get_default_camera, get_storage_path,
-    session::{SessionChannel, SessionState},
+    session::{SessionChannel, SessionController, SessionControllerState, SessionState},
     state::{KeystrokeBroadCaster, MouseclickBroadCaster},
     windows,
     AppState, Auth, AuthConfig, CameraController, Configuration, GeneralConfig, RecordChannel, SelectedDevice, Session, Shutdown, TimeTrackerMap, TrackHistory
@@ -122,6 +122,8 @@ async fn main() {
 
     let time_tracker: TimeTrackerMap = Arc::new(Mutex::new(TrackHistory::default()));
 
+    let session_controller: SessionControllerState = Arc::new(Mutex::new(SessionController::default()));
+
     let selected_device: SelectedDevice = Arc::new(Mutex::new(get_default_camera().unwrap()));
 
     let app = tauri::Builder::default()
@@ -136,6 +138,7 @@ async fn main() {
         .manage(auth_config)
         .manage(time_tracker)
         .manage(selected_device)
+        .manage(session_controller)
         .invoke_handler(tauri::generate_handler![
             commands::start_session,
             commands::stop_session,

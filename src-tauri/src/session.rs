@@ -1,5 +1,5 @@
 use std::{
-    path::PathBuf, sync::{self, atomic::AtomicBool, Arc, Mutex, RwLock}, time::Duration
+     path::PathBuf, sync::{self, atomic::{AtomicBool, Ordering}, Arc, Mutex, RwLock}, time::Duration
 };
 
 use chrono::Utc;
@@ -86,15 +86,9 @@ impl Session {
                 started_at: get_current_datetime().to_rfc2822(),
                 ended_at: None,
                 exited: Arc::new(AtomicBool::new(false)),
-
             };
 
             let capsule_id = time_capsule.id.clone();
-            println!(
-                "Start time capsule: {}, is_shutdown: {is_shutdown}",
-                capsule_id
-            );
-
             let start_ts = Utc::now().timestamp() as u64;
 
             tokio::select! {
@@ -125,9 +119,7 @@ impl Session {
             time_capsule.exit();
 
             let handle = app.clone();
-            // let start_ts = DateTime::parse_from_str(&time_capsule.started_at, "").unwrap().timestamp() as u64;
             let end_ts = Utc::now().timestamp() as u64;
- // time_capsule.ended_at.clone().map_or(Utc::now().timestamp() as u64, |end| DateTime::parse_from_str(&end, "").unwrap().timestamp() as u64);
 
             tokio::spawn(async move {
                 if let Err(err) = save_capsule(time_capsule).await {
@@ -135,19 +127,16 @@ impl Session {
                     // todo: log error to server and save to local error log
                 }
 
-                // let start_dt = DateTime::parse_from_str(&started_at, "").unwrap().timestamp() as u64;
-                // let end_dt = DateTime::parse_from_str(&started_at, "").unwrap().timestamp() as u64; //Utc::now().timestamp() as u64;
                 let diff = end_ts - start_ts;
-                dbg!(diff);
                 handle.state::<TimeTrackerMap>().lock().unwrap().increment_track_for_today(diff);
                 handle.state::<TimeTrackerMap>().lock().unwrap().save();
-
             });
 
-            // self.time_capsules.push(time_capsule);
-            println!("Added time capsule");
+            if app.state::<SessionControllerState>().lock().unwrap().is_shutdown() {
+                is_shutdown = true;
+            }
+            dbg!(is_shutdown);
         }
-
         println!("Session shutdown");
 
         Ok(())
@@ -420,3 +409,24 @@ async fn save_capsule(time_capsule: TimeCapsule) -> crate::Result<()> {
 
     Ok(())
 }
+
+#[derive(Debug, Clone, Default)]
+pub struct SessionController {
+    pub is_shutdown: Arc<AtomicBool>,
+}
+
+impl SessionController {
+    pub fn shutdown(&mut self) {
+        self.is_shutdown.store(true, Ordering::Relaxed);
+    }
+
+    pub fn start(&mut self) {
+        self.is_shutdown.store(false, Ordering::Relaxed);
+    }
+
+    pub fn is_shutdown(&self) -> bool {
+        self.is_shutdown.load(Ordering::Relaxed)
+    }
+}
+
+pub type SessionControllerState = Arc<Mutex<SessionController>>;

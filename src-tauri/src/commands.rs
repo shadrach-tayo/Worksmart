@@ -17,6 +17,7 @@ use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{Cursor, Read};
+use std::sync::atomic::Ordering;
 use std::{
     io::Write,
     ops::Mul,
@@ -33,6 +34,7 @@ use tokio::{fs, sync::broadcast, time};
 use xcap::{Monitor, Window as XcapWindow};
 use yuv::convert::ToRGB;
 
+use crate::session::SessionControllerState;
 use crate::time_map::{TimeTrackerMap, TrackHistory};
 // use crate::encoder::uyvy422_frame;
 use crate::{storage, windows, AppWindow, Auth, AuthConfig, CameraController, Configuration, SelectedDevice};
@@ -104,7 +106,7 @@ pub async fn start_session(
     window: Window,
     session_rx: State<'_, SessionChannel>,
     session: State<'_, SessionState>,
-    general_config: State<'_, GeneralConfig>,
+    session_controller: State<'_, SessionControllerState>,
 ) -> Result<Option<SessionDetail>, ()> {
     let sesh = session.lock().unwrap().clone();
     if sesh.is_running {
@@ -112,8 +114,6 @@ pub async fn start_session(
     }
 
     let app_handle = window.app_handle();
-
-    println!("{:?}", general_config.lock().unwrap());
 
     let id = gen_rand_string(16);
     let started_at = get_current_datetime().to_rfc3339();
@@ -127,16 +127,20 @@ pub async fn start_session(
         shutdown: Arc::new(Shutdown::new(session_rx.subscribe())),
     };
 
+    session_controller.lock().unwrap().start();
+
     let active_session = session.lock().unwrap().clone();
 
+    let handle = app_handle.clone();
     tokio::spawn(async move {
         if let Err(err) = active_session.start(app_handle).await {
             println!("Session Error: {:?}", err);
         }
+        handle.state::<SessionState>().lock().unwrap().is_running = false;
+        handle.state::<SessionState>().lock().unwrap().ended_at = Some(get_current_datetime().to_rfc3339());
+        handle.emit_all("SessionEnded", ()).unwrap();
         println!("Close session#start thread");
     });
-
-    // dbg!(get_focused_window());
 
     Ok(Some(SessionDetail {
         id,
@@ -145,32 +149,27 @@ pub async fn start_session(
     }))
 }
 
+use tauri::api::dialog::blocking::{confirm, ask};
 #[tauri::command]
 pub async fn stop_session(
     window: Window,
     session: State<'_, SessionState>,
     session_rx: State<'_, SessionChannel>,
+    session_controller: State<'_, SessionControllerState>,
 ) -> Result<(), ()> {
     if !session.lock().unwrap().is_running {
         return Ok(());
     }
 
-    let app_handle = window.app_handle();
+    let end_after_current_session = ask(Some(&window), "End session", "Do you want to end this session after this time gap?");
 
-    session_rx.send(()).unwrap();
-    // std::thread::yield_now();
-    session.lock().unwrap().ended_at = Some(get_current_datetime().to_rfc3339());
-    // session.lock().unwrap().ended_at = Some(get_current_datetime().to_rfc3339());
-    session.lock().unwrap().is_running = false;
+    if end_after_current_session {
+        session_controller.lock().unwrap().shutdown();
+        dbg!(session_controller.lock().unwrap().is_shutdown());
+    } else {
+        session_rx.send(()).unwrap();
+    }
 
-    let state = app_handle.state::<SessionState>().lock().unwrap().clone();
-
-    println!(
-        "Session gracefully from: {:?} to: {:?}",
-        state.started_at, state.ended_at
-    );
-
-    println!("I'm out");
     Ok(())
 }
 
