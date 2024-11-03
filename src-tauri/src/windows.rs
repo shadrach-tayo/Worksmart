@@ -153,7 +153,9 @@ impl AppWindow {
                     .maximized(false)
                     .resizable(false)
                     .transparent(true)
-                    .inner_size(420.0, 420.0)
+                    .decorations(false)
+                    .always_on_top(true)
+                    .inner_size(400.0, 340.0)
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .theme(Some(tauri::Theme::Dark))
                     .build()?
@@ -200,6 +202,14 @@ pub fn show_timecard(app: &AppHandle) {
 
 pub fn close_timecard(app: &AppHandle) {
     (AppWindow::TimeCard).close(app);
+}
+
+pub fn show_permission(app: &AppHandle) {
+    (AppWindow::Permissions).show(app).ok();
+}
+
+pub fn close_permission(app: &AppHandle) {
+    (AppWindow::Permissions).close(app);
 }
 
 // pub fn show_window(app: &AppHandle, name: String) -> crate::Result<()> {

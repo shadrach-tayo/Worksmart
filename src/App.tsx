@@ -1,45 +1,43 @@
-import { useEffect, useState } from "react";
-// import reactLogo from "./assets/react.svg";
+// import { useEffect, useState } from "react";
+// // import reactLogo from "./assets/react.svg";
 import "./App.css";
-import {
-    check_permissions,
-    record_screen,
-    request_permissions,
-    start_session,
-    stop_session,
-    update_config,
-    webcam_capture,
-} from "./ipc";
+// import {
+//     record_screen,
+//     start_session,
+//     stop_session,
+//     update_config,
+//     webcam_capture,
+// } from "./ipc";
 
 function App() {
-    const [hasPermission, setHasPermission] = useState(false);
+  // const [hasPermission, setHasPermission] = useState(false);
 
-    useEffect(() => {
-        const check = async () => {
-            setHasPermission(await check_permissions());
-        };
+  // useEffect(() => {
+  //     const check = async () => {
+  //         setHasPermission(await check_permissions());
+  //     };
 
-        check();
-    }, []);
+  //     check();
+  // }, []);
 
-    return (
-        <div className="container">
-            <h1>Worksmart ⚡️</h1>
+  return (
+    <div className="container">
+      <h1>Worksmart ⚡️</h1>
 
-            <p>Start work session ⏰</p>
+      <p>Start work session ⏰</p>
 
-            <div
-                className="my-2 flex items-center justify-between gap-3"
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "5px",
-                    maxWidth: "700px",
-                    margin: "10px auto",
-                }}
-            >
-                {hasPermission ? (
+      <div
+        className="my-2 flex items-center justify-between gap-3"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "5px",
+          maxWidth: "700px",
+          margin: "10px auto",
+        }}
+      >
+        {/* {hasPermission ? (
                     <>
                         <button onClick={start_session}>Start session</button>
                         <button onClick={stop_session}>Stop session</button>
@@ -59,10 +57,10 @@ function App() {
                             Request permissions
                         </button>
                     </div>
-                )}
-            </div>
-        </div>
-    );
+                )} */}
+      </div>
+    </div>
+  );
 }
 
 export default App;

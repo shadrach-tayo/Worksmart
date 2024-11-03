@@ -3,7 +3,7 @@
 
 #![allow(unused_imports)]
 
-use std::sync::{atomic::{self, AtomicBool}, Arc, Mutex};
+use std::{fs::Permissions, sync::{atomic::{self, AtomicBool}, Arc, Mutex}};
 use chrono::{DateTime, Utc};
 // use gst::prelude::*;
 
@@ -13,11 +13,7 @@ use rdev::{listen, Event, EventType};
 use tauri::{Manager, WindowEvent};
 
 use worksmart::{
-    autostart, commands, gen_rand_string, get_current_datetime, get_default_camera, get_storage_path,
-    session::{SessionChannel, SessionController, SessionControllerState, SessionState},
-    state::{KeystrokeBroadCaster, MouseclickBroadCaster},
-    windows,
-    AppState, Auth, AuthConfig, CameraController, Configuration, GeneralConfig, RecordChannel, SelectedDevice, Session, Shutdown, TimeTrackerMap, TrackHistory
+    autostart, commands, gen_rand_string, get_current_datetime, get_default_camera, get_storage_path, session::{SessionChannel, SessionController, SessionControllerState, SessionState}, state::{KeystrokeBroadCaster, MouseclickBroadCaster}, windows, AppState, Auth, AuthConfig, CameraController, Configuration, GeneralConfig, PermisssionsStatus, RecordChannel, SelectedDevice, Session, Shutdown, TimeTrackerMap, TrackHistory
 };
 
 pub fn create_device_query_listener(mouseclick_rx: MouseclickBroadCaster, keystroke_rx: KeystrokeBroadCaster) {
@@ -86,9 +82,9 @@ async fn main() {
     // let gst_registry = gst::Registry::get();
     // gst_registry.scan_path(std::env::current_exe().unwrap().parent().unwrap());
 
-    nokhwa::nokhwa_initialize(|granted| {
-        println!("Camera permission granted: {granted}");
-    });
+    // nokhwa::nokhwa_initialize(|granted| {
+    //     println!("Camera permission granted: {granted}");
+    // });
 
     #[allow(unused_variables)]
     #[allow(unused_mut)]
@@ -144,8 +140,6 @@ async fn main() {
             commands::stop_session,
             commands::get_session,
             commands::record_screen,
-            commands::request_permissions,
-            commands::permissions_granted,
             commands::set_preferences,
             commands::get_preferences,
             commands::webcam_capture,
@@ -157,7 +151,12 @@ async fn main() {
             commands::list_camera_devices,
             commands::select_camera_device,
             commands::get_track_history,
-            commands::get_time_tracked_today
+            commands::get_time_tracked_today,
+            commands::request_camera_permissions,
+            commands::request_accessibility_permissions,
+            commands::request_screen_capture_permissions,
+            commands::on_permissions_granted,
+            commands::get_permission_status,
         ])
         .on_window_event(|event| {
             if let WindowEvent::CloseRequested { api, .. } = event.event() {
@@ -168,15 +167,22 @@ async fn main() {
             }
         })
         .setup(|app| {
-            if app.app_handle().state::<AuthConfig>().lock().unwrap().is_none() {
-                windows::show_login(&app.app_handle());
+            let permissions = PermisssionsStatus::get_status();
+            if permissions.required_granted() {
+                if app.app_handle().state::<AuthConfig>().lock().unwrap().is_none() {
+                    windows::show_login(&app.app_handle());
+                } else {
+                    windows::show_tracker(&app.app_handle());
+                }
             } else {
-                windows::show_tracker(&app.app_handle());
-                // windows::show_timecard(&app.app_handle());
+                windows::show_permission(&app.app_handle());
             }
 
             // purge stale keys
             app.state::<TimeTrackerMap>().lock().unwrap().clean_up();
+
+            // todo: sign in on app launch based on user preference
+            // todo: start tracking on app launch based on user preference
 
             // let media_data_clone = media_data.clone();
             // let output_path = get_storage_path(&app.app_handle()).unwrap();

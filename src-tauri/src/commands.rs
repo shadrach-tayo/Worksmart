@@ -16,6 +16,7 @@ use nokhwa::{native_api_backend, pixel_format, NokhwaError};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs::Permissions;
 use std::io::{Cursor, Read};
 use std::sync::atomic::Ordering;
 use std::{
@@ -37,7 +38,7 @@ use yuv::convert::ToRGB;
 use crate::session::SessionControllerState;
 use crate::time_map::{TimeTrackerMap, TrackHistory};
 // use crate::encoder::uyvy422_frame;
-use crate::{storage, windows, AppWindow, Auth, AuthConfig, CameraController, Configuration, SelectedDevice};
+use crate::{storage, windows, AppWindow, Auth, AuthConfig, CameraController, Configuration, PermisssionsStatus, SelectedDevice};
 
 use crate::{
     configuration, gen_rand_string, get_current_datetime,
@@ -192,16 +193,47 @@ pub async fn get_session(session: State<'_, SessionState>) -> Result<Option<Sess
     }))
 }
 
-#[allow(clippy::default_constructed_unit_structs)]
+// #[allow(clippy::default_constructed_unit_structs)]
+// #[tauri::command]
+// pub fn permissions_granted() -> bool {
+//     ScreenCaptureAccess::default().preflight() && scap::has_permission()
+// }
+
+// #[allow(clippy::default_constructed_unit_structs)]
+// #[tauri::command]
+// pub fn request_permissions() -> bool {
+//     ScreenCaptureAccess::default().request() && scap::request_permission()
+// }
+
 #[tauri::command]
-pub fn permissions_granted() -> bool {
-    ScreenCaptureAccess::default().preflight() && scap::has_permission()
+pub fn get_permission_status() -> PermisssionsStatus {
+    PermisssionsStatus::get_status()
 }
 
-#[allow(clippy::default_constructed_unit_structs)]
 #[tauri::command]
-pub fn request_permissions() -> bool {
-    ScreenCaptureAccess::default().request() && scap::request_permission()
+pub fn request_camera_permissions() {
+    PermisssionsStatus::request_permission(crate::PermissionType::Camera);
+}
+
+#[tauri::command]
+pub fn request_accessibility_permissions() {
+    PermisssionsStatus::request_permission(crate::PermissionType::Accessibility);
+}
+
+#[tauri::command]
+pub fn request_screen_capture_permissions() {
+    PermisssionsStatus::request_permission(crate::PermissionType::ScreenCapture);
+}
+
+#[tauri::command]
+pub fn on_permissions_granted(window: Window, auth: State<'_, AuthConfig>) {
+    let handle = window.app_handle();
+
+    if auth.lock().unwrap().is_none() {
+        windows::show_login(&handle);
+    } else {
+        windows::show_tracker(&handle);
+    }
 }
 
 #[tauri::command]

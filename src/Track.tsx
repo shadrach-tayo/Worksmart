@@ -136,7 +136,7 @@ const Track = () => {
           </div>
           <div className="tracked-time">
             <Circle fill={"#3cbd0f"} stroke="transparent" size={12} />
-            <p>Today: {timeTrackedToday}</p>
+            <p>{timeTrackedToday}</p>
           </div>
         </div>
       </div>

@@ -1,12 +1,24 @@
 import { invoke } from "@tauri-apps/api/tauri";
-import { Configuration, Session, User } from "../types";
+import { Configuration, PermisssionsStatus, Session, User } from "../types";
 
-export const check_permissions = async (): Promise<boolean> => {
-  return await invoke("permissions_granted");
+export const get_permission_status = async (): Promise<PermisssionsStatus> => {
+  return await invoke("get_permission_status");
 };
 
-export const request_permissions = async (): Promise<boolean> => {
-  return await invoke("request_permissions");
+export const request_camera_permissions = async () => {
+  await invoke("request_camera_permissions");
+};
+
+export const request_accessibility_permissions = async () => {
+  await invoke("request_accessibility_permissions");
+};
+
+export const request_screen_capture_permissions = async () => {
+  await invoke("request_screen_capture_permissions");
+};
+
+export const on_permissions_granted = async () => {
+  await invoke("on_permissions_granted");
 };
 
 export async function record_screen() {

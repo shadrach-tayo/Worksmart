@@ -3,38 +3,27 @@ export function relativeTime(timestamp: number) {
 
   const minute = 60;
   const hour = minute * 60;
-  const day = hour * 24;
-  const week = day * 7;
-  const month = day * 30;
-  const year = month * 12;
 
-  if (diff < 30) {
-    return "just now";
-  } else if (diff < minute) {
-    return diff + " seconds";
-  } else if (diff < 2 * minute) {
-    return "A minutes";
-  } else if (diff < hour) {
-    const sub = Math.floor(diff / minute);
-    return sub + ` minute${sub > 1 ? "s" : ""}`;
-  } else if (Math.floor(diff / hour) == 1) {
-    return "An hour";
-  } else if (diff < day) {
-    const sub = Math.floor(diff / hour);
-    return sub + ` hour${sub > 1 ? "s" : ""}`;
-  } else if (diff < day * 2) {
-    return "yesterday";
-  } else if (diff < week) {
-    const sub = Math.floor(diff / day);
-    return sub + " days";
-  } else if (diff < month) {
-    const sub = Math.floor(diff / week);
-    return `${sub === 1 ? "A" : sub} week${sub > 1 ? "s" : ""}`;
-  } else if (diff < year) {
-    const sub = Math.floor(diff / month);
-    return `${sub === 1 ? "A" : sub} month${sub > 1 ? "s" : ""}`;
+  // Calculate the number of hours and leftover minutes
+  const hours = Math.floor(diff / hour);
+  const minutes = Math.floor((diff % hour) / minute);
+
+  // Format the result as 'HH:MM' or 'MM' if there are no hours.
+  let formattedTime = "";
+
+  if (hours > 0) {
+    formattedTime +=
+      (hours < 10 ? "0" + hours : hours) + ` Hour${hours > 1 ? "s" : ""} `;
+    formattedTime +=
+      minutes < 10
+        ? "0" + minutes
+        : minutes + ` Minute${minutes > 0 ? "s" : ""}`;
+  } else if (minutes > 0) {
+    formattedTime += "" + minutes + " Minutes";
   } else {
-    const sub = Math.floor(diff / year);
-    return `${sub === 1 ? "A" : sub} year${sub > 1 ? "s" : ""}`;
+    formattedTime = "Less than a minute";
   }
+
+  return formattedTime;
 }
+//
