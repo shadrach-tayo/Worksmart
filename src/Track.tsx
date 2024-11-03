@@ -14,7 +14,6 @@ import {
   get_session,
   get_time_tracked_today,
   get_user,
-  hide_window,
   minimize_window,
   quit_app,
   show_window,

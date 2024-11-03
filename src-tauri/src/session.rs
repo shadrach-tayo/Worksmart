@@ -5,12 +5,13 @@ use std::{
 use chrono::Utc;
 // use chrono::{DateTime, Utc};
 use rand::{thread_rng, Rng};
+use scap::get_targets;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tokio::sync::broadcast;
 use xcap::Monitor;
 
-use crate::{gen_rand_string, get_current_datetime, get_focused_window, storage, AppState, CameraController, CameraSnapshotOptions, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap};
+use crate::{gen_rand_string, get_current_datetime, get_focused_window, screen_capture::{ScreenCapture, ScreenshotOptions}, storage, AppState, CameraController, CameraSnapshotOptions, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap};
 
 pub type SessionChannel = tokio::sync::broadcast::Sender<()>;
 pub type SessionState = Arc<Mutex<Session>>;
@@ -229,7 +230,6 @@ impl TimeCapsule {
         tokio::spawn(listen_for_keystrokes);
 
         let exited = self.exited.clone();
-        // let mut active_windows = Arc::new(Mutex::new(vec![]));
         let active_windows = Arc::clone(&self.windows);
         let log_delay_in_seconds = time_gap_in_secs / 10;
         let active_window_logger = async move {
@@ -272,7 +272,6 @@ impl TimeCapsule {
             gen.gen_range(min_capture_start_time..=max_delay_based_on_capture_lag)
         };
 
-
         let media_storage_path = Arc::clone(&storage_path);
         let capsule_exited = self.exited.clone();
         tokio::spawn(async move {
@@ -281,36 +280,11 @@ impl TimeCapsule {
             if capsule_exited.load(sync::atomic::Ordering::SeqCst) {
                 return;
             }
-
-            let monitors = Monitor::all().unwrap();
-            let focused_window = match get_focused_window() {
-                Some(w) => w.app_name,
-                None => "".to_owned()
-            };
-
-            for monitor in monitors {
-                let image = monitor.capture_image().unwrap();
-
-                let window_name = if focused_window.is_empty() {
-                    monitor.name()
-                } else {
-                    &focused_window
-                };
-
-                let img_path = media_storage_path.clone().join(format!(
-                    "screenshot_{}_{}.png",
-                    window_name,
-                    get_current_datetime().to_rfc3339(),
-                ));
-
-                let file = tokio::fs::File::create(img_path.clone()).await;
-
-                if file.is_ok() {
-                    image.save(&img_path).unwrap();
-                } else {
-                    // save to error log and stream to server later
-                    println!("Error saving screenshot to dir: {:?}", img_path);
-                }
+            if let Err(err) = ScreenCapture::take_screenshot(ScreenshotOptions {
+                output: media_storage_path.to_path_buf(),
+            }).await {
+                eprintln!("Error taking screenshot {:?}, time: {}", get_focused_window().unwrap(), get_current_datetime());
+                eprintln!("Error: {:?}", err);
             }
         });
 
