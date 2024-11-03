@@ -87,3 +87,7 @@ export async function select_camera_device(name: string) {
 export async function get_time_tracked_today() {
   return (await invoke("get_time_tracked_today")) as number;
 }
+
+export async function quit_app() {
+  await invoke("quit_app");
+}

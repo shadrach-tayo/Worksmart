@@ -157,6 +157,7 @@ async fn main() {
             commands::request_screen_capture_permissions,
             commands::on_permissions_granted,
             commands::get_permission_status,
+            commands::quit_app,
         ])
         .on_window_event(|event| {
             if let WindowEvent::CloseRequested { api, .. } = event.event() {

@@ -127,6 +127,10 @@ body {
     stroke: #3cbd0f;
 }
 
+.icon-btn:disabled > svg {
+    stroke: gray;
+}
+
 .icon-btn:disabled:hover > svg {
     stroke: gray;
 }

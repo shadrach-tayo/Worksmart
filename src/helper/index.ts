@@ -17,9 +17,9 @@ export function relativeTime(timestamp: number) {
     formattedTime +=
       minutes < 10
         ? "0" + minutes
-        : minutes + ` Minute${minutes > 0 ? "s" : ""}`;
+        : minutes + ` Minute${minutes > 1 ? "s" : ""}`;
   } else if (minutes > 0) {
-    formattedTime += "" + minutes + " Minutes";
+    formattedTime += "" + minutes + ` Minute${minutes > 1 ? "s" : ""}`;
   } else {
     formattedTime = "Less than a minute";
   }

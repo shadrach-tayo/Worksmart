@@ -193,18 +193,6 @@ pub async fn get_session(session: State<'_, SessionState>) -> Result<Option<Sess
     }))
 }
 
-// #[allow(clippy::default_constructed_unit_structs)]
-// #[tauri::command]
-// pub fn permissions_granted() -> bool {
-//     ScreenCaptureAccess::default().preflight() && scap::has_permission()
-// }
-
-// #[allow(clippy::default_constructed_unit_structs)]
-// #[tauri::command]
-// pub fn request_permissions() -> bool {
-//     ScreenCaptureAccess::default().request() && scap::request_permission()
-// }
-
 #[tauri::command]
 pub fn get_permission_status() -> PermisssionsStatus {
     PermisssionsStatus::get_status()
@@ -391,4 +379,10 @@ pub fn get_time_tracked_today(
     time_tracker: State<'_, TimeTrackerMap>,
 ) -> Result<u64, String> {
     Ok(time_tracker.lock().unwrap().get_track_for_today())
+}
+
+#[tauri::command]
+pub fn quit_app(
+) {
+    std::process::exit(0);
 }
