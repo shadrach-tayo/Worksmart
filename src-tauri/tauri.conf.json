@@ -26,6 +26,7 @@
     },
     "bundle": {
       "active": true,
+      "category": "DeveloperTool",
       "targets": "all",
       "identifier": "worksmart",
       "icon": [
@@ -39,7 +40,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://releases.myapp.com/{{target}}/{{arch}}/{{current_version}}"
+        "https://cdn.crabnebula.app/update/notor/worksmart/{{target}}-{{arch}}/{{current_version}}"
       ],
       "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU5N0NDQ0M2NkVFNUYyOTIKUldTUzh1VnV4c3g4V2VrMWtPRkNCZVM1SjJYc2JrK2xFNytaKzA5LytxUU5sU2JXN1IzV1hyemsK",

@@ -3,7 +3,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use chrono::{DateTime, Datelike, Utc};
+use chrono::{DateTime, Datelike, Timelike, Utc};
 use chrono_tz::Tz;
 
 pub fn with_local_timezone(date_time: DateTime<Utc>) -> DateTime<Tz> {
@@ -20,6 +20,11 @@ pub fn get_current_datetime() -> DateTime<Utc> {
 pub fn get_current_date() -> String {
     let today = Utc::now();
     format!("{}-{}-{}", today.year(), today.month(), today.day())
+}
+
+pub fn get_folder_datetime() -> String {
+    let today = Utc::now();
+    format!("Date_{}_{}_{}_{}_{}", today.year(), today.month(), today.day(), today.hour(), today.minute())
 }
 
 use rand::{thread_rng, Rng};

@@ -182,6 +182,40 @@ async fn main() {
             // purge stale keys
             app.state::<TimeTrackerMap>().lock().unwrap().clean_up();
 
+
+            // tauri auto update
+            let shared_handle = app.app_handle();
+            tauri::async_runtime::spawn(async move {
+                match tauri::updater::builder(shared_handle).check().await {
+                    Ok(update) => {
+                        println!("Worksmart Update: {}", update.is_update_available());
+                        if update.is_update_available() {
+                            update.download_and_install().await.unwrap();
+                        }
+                    }
+                    Err(e) => {
+                        println!("worksmart Update failed to get update: {}", e);
+                    }
+                }
+            });
+
+            // autostart by default on debug mode (debug build)
+            let is_debug_mode = cfg!(debug_assertions);
+
+            // Enable app auto launch
+            let autostart = autostart::update(!is_debug_mode);
+            if autostart.is_ok() {
+                println!(
+                    "Auto start {}",
+                    if !is_debug_mode {
+                        "enabled"
+                    } else {
+                        "disabled"
+                    }
+                );
+            }
+
+
             // todo: sign in on app launch based on user preference
             // todo: start tracking on app launch based on user preference
 
@@ -413,23 +447,6 @@ async fn main() {
             //         }
             //     }
             // });
-
-
-            // autostart by default on debug mode (debug build)
-            let is_debug_mode = cfg!(debug_assertions);
-
-            // Enable app auto launch
-            let autostart = autostart::update(!is_debug_mode);
-            if autostart.is_ok() {
-                println!(
-                    "Auto start {}",
-                    if !is_debug_mode {
-                        "enabled"
-                    } else {
-                        "disabled"
-                    }
-                );
-            }
 
             Ok(())
         });

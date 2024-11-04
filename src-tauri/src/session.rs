@@ -11,7 +11,7 @@ use tauri::{AppHandle, Manager};
 use tokio::sync::broadcast;
 use xcap::Monitor;
 
-use crate::{gen_rand_string, get_current_datetime, get_focused_window, screen_capture::{ScreenCapture, ScreenshotOptions}, storage, AppState, CameraController, CameraSnapshotOptions, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap};
+use crate::{gen_rand_string, get_current_datetime, get_focused_window, get_folder_datetime, screen_capture::{ScreenCapture, ScreenshotOptions}, storage, AppState, CameraController, CameraSnapshotOptions, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap};
 
 pub type SessionChannel = tokio::sync::broadcast::Sender<()>;
 pub type SessionState = Arc<Mutex<Session>>;
@@ -67,7 +67,7 @@ impl Session {
         let mut is_shutdown = false;
 
         while !is_shutdown {
-            let id = gen_rand_string(16);
+            let id = get_folder_datetime(); //gen_rand_string(16);
             let dir =  app.state::<GeneralConfig>()
                 .lock()
                 .unwrap()
