@@ -82,7 +82,7 @@ impl AppWindow {
                     .inner_size(463.0, 220.0)
                     .transparent(true)
                     .decorations(false)
-                    .always_on_top(true)
+                    // .always_on_top(true)
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .theme(Some(tauri::Theme::Dark))
                     .build()?;
