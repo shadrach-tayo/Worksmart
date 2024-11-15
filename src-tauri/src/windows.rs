@@ -54,6 +54,8 @@ impl AppWindow {
             return Ok(window);
         }
 
+        let always_on_top = cfg!(debug_assertions);
+
         Ok(match self {
             AppWindow::Login => {
                 tauri::WindowBuilder::new(app, label, tauri::WindowUrl::App("/login".into()))
@@ -82,7 +84,7 @@ impl AppWindow {
                     .inner_size(463.0, 220.0)
                     .transparent(true)
                     .decorations(false)
-                    // .always_on_top(true)
+                    .always_on_top(always_on_top)
                     .title_bar_style(tauri::TitleBarStyle::Overlay)
                     .theme(Some(tauri::Theme::Dark))
                     .build()?;

@@ -21,6 +21,7 @@ pub fn create_device_query_listener(mouseclick_rx: MouseclickBroadCaster, keystr
         let callback = move |event: Event| {
             match event.event_type {
                 EventType::ButtonPress(rdev::Button::Left) => {
+                    // println!("ButtonPress");
                     if let Err(err) =
                         mouseclick_rx
                         .send(get_current_datetime())
@@ -40,6 +41,7 @@ pub fn create_device_query_listener(mouseclick_rx: MouseclickBroadCaster, keystr
                 //     }
                 // }
                 EventType::KeyPress(_) => {
+                    // println!("KeyPress");
                     if let Err(err) = keystroke_rx
                         .send(get_current_datetime())
                     {
@@ -82,9 +84,10 @@ async fn main() {
     // let gst_registry = gst::Registry::get();
     // gst_registry.scan_path(std::env::current_exe().unwrap().parent().unwrap());
 
-    // nokhwa::nokhwa_initialize(|granted| {
-    //     println!("Camera permission granted: {granted}");
-    // });
+    #[cfg(target_os = "macos")]
+    nokhwa::nokhwa_initialize(|granted| {
+        println!("Camera permission granted: {granted}");
+    });
 
     #[allow(unused_variables)]
     #[allow(unused_mut)]

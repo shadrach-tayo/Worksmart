@@ -732,10 +732,26 @@ checksum = "f425db7937052c684daec3bd6375c8abe2d146dca4b8b143d6db777c39138f3a"
 dependencies = [
  "bitflags 1.3.2",
  "block",
- "cocoa-foundation",
+ "cocoa-foundation 0.1.2",
  "core-foundation 0.9.4",
  "core-graphics 0.22.3",
  "foreign-types 0.3.2",
+ "libc",
+ "objc",
+]
+
+[[package]]
+name = "cocoa"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f79398230a6e2c08f5c9760610eb6924b52aa9e7950a619602baba59dcbbdbb2"
+dependencies = [
+ "bitflags 2.6.0",
+ "block",
+ "cocoa-foundation 0.2.0",
+ "core-foundation 0.10.0",
+ "core-graphics 0.24.0",
+ "foreign-types 0.5.0",
  "libc",
  "objc",
 ]
@@ -750,6 +766,20 @@ dependencies = [
  "block",
  "core-foundation 0.9.4",
  "core-graphics-types 0.1.3",
+ "libc",
+ "objc",
+]
+
+[[package]]
+name = "cocoa-foundation"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e14045fb83be07b5acf1c0884b2180461635b433455fa35d1cd6f17f1450679d"
+dependencies = [
+ "bitflags 2.6.0",
+ "block",
+ "core-foundation 0.10.0",
+ "core-graphics-types 0.2.0",
  "libc",
  "objc",
 ]
@@ -2905,8 +2935,8 @@ source = "git+https://github.com/capsoftware/nokhwa?rev=6ce1e8270d57#6ce1e8270d5
 dependencies = [
  "flume 0.10.14",
  "image 0.24.9",
- "nokhwa-bindings-macos",
- "nokhwa-core",
+ "nokhwa-bindings-macos 0.2.0 (git+https://github.com/capsoftware/nokhwa?rev=6ce1e8270d57)",
+ "nokhwa-core 0.1.0 (git+https://github.com/capsoftware/nokhwa?rev=6ce1e8270d57)",
  "paste",
  "serde",
  "thiserror",
@@ -2915,16 +2945,41 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-macos"
 version = "0.2.0"
-source = "git+https://github.com/capsoftware/nokhwa?rev=6ce1e8270d57#6ce1e8270d57436e6caa6776247dab70aed13b65"
+source = "git+https://github.com/CapSoftware/nokhwa?rev=0d3d1f30a78b#0d3d1f30a78bb4616b4a4d0939a29ad0c1a8e14f"
 dependencies = [
  "block",
- "cocoa-foundation",
+ "cocoa-foundation 0.1.2",
  "core-media-sys",
  "core-video-sys",
  "flume 0.10.14",
- "nokhwa-core",
+ "nokhwa-core 0.1.0 (git+https://github.com/CapSoftware/nokhwa?rev=0d3d1f30a78b)",
  "objc",
  "once_cell",
+]
+
+[[package]]
+name = "nokhwa-bindings-macos"
+version = "0.2.0"
+source = "git+https://github.com/capsoftware/nokhwa?rev=6ce1e8270d57#6ce1e8270d57436e6caa6776247dab70aed13b65"
+dependencies = [
+ "block",
+ "cocoa-foundation 0.1.2",
+ "core-media-sys",
+ "core-video-sys",
+ "flume 0.10.14",
+ "nokhwa-core 0.1.0 (git+https://github.com/capsoftware/nokhwa?rev=6ce1e8270d57)",
+ "objc",
+ "once_cell",
+]
+
+[[package]]
+name = "nokhwa-core"
+version = "0.1.0"
+source = "git+https://github.com/CapSoftware/nokhwa?rev=0d3d1f30a78b#0d3d1f30a78bb4616b4a4d0939a29ad0c1a8e14f"
+dependencies = [
+ "bytes",
+ "image 0.24.9",
+ "thiserror",
 ]
 
 [[package]]
@@ -4698,9 +4753,9 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 
 [[package]]
 name = "tauri"
-version = "1.7.2"
+version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e33e3ba00a3b05eb6c57ef135781717d33728b48acf914bb05629e74d897d29"
+checksum = "1bf327e247698d3f39af8aa99401c9708384290d1f5c544bf5d251d44c2fea22"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4720,11 +4775,14 @@ dependencies = [
  "http",
  "ignore",
  "indexmap 1.9.3",
+ "infer",
+ "log",
  "minisign-verify",
  "objc",
  "once_cell",
  "open",
  "percent-encoding",
+ "plist",
  "rand 0.8.5",
  "raw-window-handle",
  "regex",
@@ -4810,6 +4868,22 @@ dependencies = [
  "syn 1.0.109",
  "tauri-codegen",
  "tauri-utils",
+]
+
+[[package]]
+name = "tauri-nspanel"
+version = "0.0.0"
+source = "git+https://github.com/ahkohd/tauri-nspanel?branch=v1#9d3f8caacc1847b11df6de9d9ef519ce4c0dcb2b"
+dependencies = [
+ "bitflags 2.6.0",
+ "block",
+ "cocoa 0.26.0",
+ "core-foundation 0.10.0",
+ "core-graphics 0.24.0",
+ "objc",
+ "objc-foundation",
+ "objc_id",
+ "tauri",
 ]
 
 [[package]]
@@ -6222,12 +6296,15 @@ dependencies = [
  "bincode",
  "chrono",
  "chrono-tz",
+ "core-foundation 0.10.0",
  "core-graphics 0.24.0",
  "dcv-color-primitives",
  "directories",
  "iana-time-zone",
  "image 0.25.2",
  "nokhwa",
+ "nokhwa-bindings-macos 0.2.0 (git+https://github.com/CapSoftware/nokhwa?rev=0d3d1f30a78b)",
+ "objc",
  "rand 0.8.5",
  "rdev",
  "scap",
@@ -6235,6 +6312,7 @@ dependencies = [
  "serde_json",
  "tauri",
  "tauri-build",
+ "tauri-nspanel",
  "tokio",
  "uuid",
  "xcap",

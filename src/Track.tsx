@@ -131,10 +131,12 @@ const Track = () => {
               </button>
             )}
           </div>
-          <div className="tracked-time">
-            <Circle fill={"#3cbd0f"} stroke="transparent" size={12} />
-            <p>{timeTrackedToday}</p>
-          </div>
+          {timeTrackedToday && (
+            <div className="tracked-time">
+              <Circle fill={"#3cbd0f"} stroke="transparent" size={12} />
+              <p>{timeTrackedToday}</p>
+            </div>
+          )}
         </div>
       </div>
       <div className="tracker-menu">

@@ -21,7 +21,7 @@ export function relativeTime(timestamp: number) {
   } else if (minutes > 0) {
     formattedTime += "" + minutes + ` Minute${minutes > 1 ? "s" : ""}`;
   } else {
-    formattedTime = "Less than a minute";
+    formattedTime = "";
   }
 
   return formattedTime;

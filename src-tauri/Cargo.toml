@@ -11,7 +11,7 @@ edition = "2021"
 tauri-build = { version = "1", features = [] }
 
 [dependencies]
-tauri = { version = "1", features = [
+tauri = { version = "1.8.1", features = [
     "macos-private-api",
     "updater",
     "window-start-dragging",
@@ -47,6 +47,14 @@ anyhow = "1.0.89"
 image = "0.25.2"
 yuv = "0.1.8"
 active-win-pos-rs = "0.8"
+core-foundation = "0.10.0"
+objc = "0.2.7"
+nokhwa-bindings-macos = { git = "https://github.com/CapSoftware/nokhwa", rev = "0d3d1f30a78b" }
+# objc2-app-kit = { version = "0.2.2", features = ["NSWindow", "NSResponder"] }
+# cocoa = "0.26.0"
+# swift-rs = "1.0.6"
+tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v1" }
+
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

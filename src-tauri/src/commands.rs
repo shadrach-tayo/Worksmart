@@ -215,6 +215,8 @@ pub fn request_screen_capture_permissions() {
 
 #[tauri::command]
 pub fn on_permissions_granted(window: Window, auth: State<'_, AuthConfig>) {
+    (AppWindow::Permissions {}).close(&window.app_handle());
+
     let handle = window.app_handle();
 
     if auth.lock().unwrap().is_none() {

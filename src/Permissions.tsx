@@ -19,10 +19,11 @@ export default function PermissionRequest() {
   const getStatus = async () => {
     const status = await get_permission_status();
     setStatus(status);
+    console.log("[STATUS]", status);
   };
 
   useEffect(() => {
-    getStatus();
+    setInterval(getStatus, 1000);
   }, []);
 
   return (

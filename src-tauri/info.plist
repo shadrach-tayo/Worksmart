@@ -22,9 +22,9 @@
 		</dict>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Worksmart uses your camera to record you in your Worksmarts</string>
+	<string>Worksmart uses your camera to record your work session if necessary</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Worksmart uses your microphone to record you in your Worksmarts</string>
+	<string>Worksmart uses your microphone to record your voice during screen/video recording</string>
 	<key>NSScreenWorksmarttureUsageDescription</key>
 	<string>Worksmart captures your screen as part of recording your Worksmarts</string>
 	<key>NSCameraUseContinuityCameraDeviceType</key>
