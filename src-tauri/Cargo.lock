@@ -6309,7 +6309,6 @@ dependencies = [
  "rdev",
  "scap",
  "serde",
- "serde_json",
  "tauri",
  "tauri-build",
  "tauri-nspanel",
