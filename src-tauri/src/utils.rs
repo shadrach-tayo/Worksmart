@@ -23,7 +23,7 @@ pub fn get_current_date() -> String {
 }
 
 pub fn get_folder_datetime() -> String {
-    let today = Utc::now();
+    let today = with_local_timezone(Utc::now());
     format!("Date_{}_{}_{}_{}_{}", today.year(), today.month(), today.day(), today.hour(), today.minute())
 }
 

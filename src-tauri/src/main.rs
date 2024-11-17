@@ -1,19 +1,19 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-#![allow(unused_imports)]
+// #![allow(unused_imports)]
 
-use std::{fs::Permissions, sync::{atomic::{self, AtomicBool}, Arc, Mutex}};
+use std::sync::{Arc, Mutex};
 use chrono::{DateTime, Utc};
 // use gst::prelude::*;
 
-use scap::capturer::{Area, Capturer, Options, Point, Size};
+use ffmpeg_sidecar::command::ffmpeg_is_installed;
 
 use rdev::{listen, Event, EventType};
 use tauri::{Manager, WindowEvent};
 
 use worksmart::{
-    autostart, commands, gen_rand_string, get_current_datetime, get_default_camera, get_storage_path, session::{SessionChannel, SessionController, SessionControllerState, SessionState}, state::{KeystrokeBroadCaster, MouseclickBroadCaster}, windows, AppState, Auth, AuthConfig, CameraController, Configuration, GeneralConfig, PermisssionsStatus, RecordChannel, SelectedDevice, Session, Shutdown, TimeTrackerMap, TrackHistory
+    autostart, commands, gen_rand_string, get_current_datetime, get_default_camera,session::{SessionChannel, SessionController, SessionControllerState, SessionState}, state::{KeystrokeBroadCaster, MouseclickBroadCaster}, windows, AppState, Auth, AuthConfig, Configuration, GeneralConfig, PermisssionsStatus, RecordChannel, SelectedDevice, Session, Shutdown, TimeTrackerMap, TrackHistory
 };
 
 pub fn create_device_query_listener(mouseclick_rx: MouseclickBroadCaster, keystroke_rx: KeystrokeBroadCaster) {
@@ -218,6 +218,13 @@ async fn main() {
                 );
             }
 
+            // Ffmpeg autodownload
+            ffmpeg_sidecar::download::auto_download().unwrap();
+            if ffmpeg_is_installed() {
+                println!("FFmpeg is already installed! 🎉");
+                println!("TIP: Use `auto_download()` to skip manual customization.");
+                println!("For demo purposes, we'll re-download and unpack it anyway.");
+            }
 
             // todo: sign in on app launch based on user preference
             // todo: start tracking on app launch based on user preference

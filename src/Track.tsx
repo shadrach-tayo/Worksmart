@@ -82,7 +82,7 @@ const Track = () => {
     <div data-tauri-drag-region className="tracker-card">
       <div className="d-flex flex-column gap-3">
         <div className="tracker-header">
-          <h2>Logo</h2>
+          <h2>Worksmart</h2>
           <div className="tab-control">
             <button
               className="icon-btn"

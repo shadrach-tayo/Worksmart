@@ -1,17 +1,14 @@
+// #![allow(unused_imports)]
 use std::{
-     path::PathBuf, sync::{self, atomic::{AtomicBool, Ordering}, Arc, Mutex, RwLock}, time::Duration
+     path::PathBuf, process::Command, sync::{self, atomic::{AtomicBool, Ordering}, Arc, Mutex, RwLock}, time::Duration
 };
 
 use chrono::Utc;
-// use chrono::{DateTime, Utc};
 use rand::{thread_rng, Rng};
-use scap::get_targets;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tokio::sync::broadcast;
-use xcap::Monitor;
-
-use crate::{gen_rand_string, get_current_datetime, get_focused_window, get_folder_datetime, screen_capture::{ScreenCapture, ScreenshotOptions}, storage, AppState, CameraController, CameraSnapshotOptions, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap};
+use crate::{get_current_datetime, get_focused_window, get_folder_datetime, screen_capture::{ScreenCapture, ScreenshotOptions}, storage, AppState, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap};
 
 pub type SessionChannel = tokio::sync::broadcast::Sender<()>;
 pub type SessionState = Arc<Mutex<Session>>;
@@ -203,7 +200,6 @@ impl TimeCapsule {
         };
         tokio::spawn(listen_for_mouse_clicks);
 
-
         let listen_for_keystrokes = async move {
             while !keystroke_shutdown.is_shutdown() {
                 tokio::select! {
@@ -264,7 +260,6 @@ impl TimeCapsule {
 
         let storage_path = Arc::new(self.storage_path.clone());
 
-
         let max_delay_based_on_capture_lag = time_gap_in_secs - MEDIA_CAPTURE_LAG;
         let min_capture_start_time = time_gap_in_secs / 10;
         let delay = {
@@ -288,7 +283,8 @@ impl TimeCapsule {
             }
         });
 
-        let selected_device = app_handle.state::<SelectedDevice>().lock().unwrap().clone().human_name();
+        let device_index = app_handle.state::<SelectedDevice>().lock().unwrap().clone().index().as_string();
+
         let webcam_storage_path = Arc::clone(&storage_path);
 
         let exited = self.exited.clone();
@@ -299,15 +295,38 @@ impl TimeCapsule {
                 return;
             }
 
-            if let Err(err) = CameraController
-                ::take_snapshot(
-                    CameraSnapshotOptions {
-                        save_path: webcam_storage_path.to_path_buf(),
-                        selected_device
-                    }
-                ).await
+            // if let Err(err) = CameraController
+            //     ::take_snapshot(
+            //         CameraSnapshotOptions {
+            //             save_path: webcam_storage_path.to_path_buf(),
+            //             selected_device
+            //         }
+            //     ).await
+            // {
+            //     eprintln!("Webcam snapshot error: {err}");
+            // }
+
+            #[cfg(target_os = "macos")]
             {
-                eprintln!("Webcam snapshot error: {err}");
+                let mut cmd = Command::new("ffmpeg");
+                cmd.args(vec!["-ss", "0.5"])
+                    .args(vec!["-t", "2"])
+                    .args(vec!["-f", "avfoundation"]);
+
+                let id = uuid::Uuid::new_v4().to_string();
+                let save_path = webcam_storage_path.join(
+                    format!("{}_{}_{}.{}", "portrait", &id, get_current_datetime().to_rfc3339(), "png")
+                );
+                cmd.args(vec!["-framerate", "30"])
+                    .arg("-i")
+                    .arg(&device_index)
+                    .args(vec!["-vframes", "1"])
+                    .arg(save_path.to_str().unwrap())
+                    .arg("-y");
+
+                if let Err(err) = cmd.spawn() {
+                    eprintln!("Webcam snapshot error: {err}");
+                }
             }
         });
 

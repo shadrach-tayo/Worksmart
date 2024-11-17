@@ -1,9 +1,9 @@
-use core_graphics::access::ScreenCaptureAccess;
-use nokhwa::{nokhwa_check, nokhwa_initialize};
+// use core_graphics::access::ScreenCaptureAccess;
+// use nokhwa::{nokhwa_check, nokhwa_initialize};
 use serde::{Deserialize, Serialize};
 
-#[cfg(target_os = "macos")]
-use core_foundation::dictionary::{CFDictionary, CFDictionaryRef};
+// #[cfg(target_os = "macos")]
+// use core_foundation::dictionary::{CFDictionary, CFDictionaryRef};
 
 pub use nokhwa_bindings_macos::{AVAuthorizationStatus, AVMediaType};
 
@@ -11,7 +11,7 @@ pub use nokhwa_bindings_macos::{AVAuthorizationStatus, AVMediaType};
 #[link(name = "ApplicationServices", kind = "framework")]
 extern "C" {
     fn AXIsProcessTrusted() -> bool;
-    fn AXIsProcessTrustedWithOptions(options: CFDictionaryRef) -> bool;
+    // fn AXIsProcessTrustedWithOptions(options: CFDictionaryRef) -> bool;
 }
 
 #[derive(Debug, Clone)]
