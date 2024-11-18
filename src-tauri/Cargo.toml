@@ -12,10 +12,10 @@ tauri-build = { version = "1", features = [] }
 
 [dependencies]
 tauri = { version = "1.8.1", features = [
+    "api-all",
     "macos-private-api",
     "updater",
-    "window-start-dragging",
-    "shell-open",
+    "process-command-api",
 ] }
 serde = { version = "1", features = ["derive"] }
 xcap = "0.0.13"

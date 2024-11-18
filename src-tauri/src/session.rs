@@ -1,8 +1,7 @@
 // #![allow(unused_imports)]
 use std::{
-    io::Read,
-    path::PathBuf,
-    process::Command,
+    path::{Path, PathBuf},
+    // process::Command,
     sync::{
         self,
         atomic::{AtomicBool, Ordering},
@@ -20,7 +19,7 @@ use chrono::Utc;
 use ffmpeg_sidecar::command::FfmpegCommand;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
+use tauri::{api::process::{Command, CommandEvent}, utils::platform, AppHandle, Manager};
 use tokio::sync::broadcast;
 
 pub type SessionChannel = tokio::sync::broadcast::Sender<()>;
@@ -346,44 +345,87 @@ impl TimeCapsule {
 
             #[cfg(target_os = "macos")]
             {
-                let mut cmd = Command::new("ffmpeg");
-                cmd.arg("-y")
-                    .args(vec!["-ss", "0.5"])
-                    .args(vec!["-t", "2"])
-                    .args(vec!["-f", "avfoundation"]);
+                // let mut cmd = Command::new(relative_command_path("ffmpeg").unwrap());
+                // cmd.arg("-y")
+                //     .args(vec!["-ss", "0.5"])
+                //     .args(vec!["-t", "2"])
+                //     .args(vec!["-f", "avfoundation"]);
 
-                // let id = uuid::Uuid::new_v4().to_string();
+                // // let id = uuid::Uuid::new_v4().to_string();
                 let save_path = webcam_storage_path.join("portrait.png");
-                // let save_path = webcam_storage_path.join(
-                //     format!("{}_{}.{}", "portrait", get_current_datetime().to_rfc3339(), "png")
-                // );
-                println!("Take snapshot: {:?}", save_path);
-                cmd.args(vec!["-framerate", "30"])
-                    .args(vec!["-i", &device_index])
-                    .args(vec!["-vframes", "1"])
-                    .arg(save_path.to_str().unwrap());
+                // // let save_path = webcam_storage_path.join(
+                // //     format!("{}_{}.{}", "portrait", get_current_datetime().to_rfc3339(), "png")
+                // // );
+                // println!("Take snapshot: {:?}", save_path);
+                // cmd.args(vec!["-framerate", "30"])
+                //     .args(vec!["-i", &device_index])
+                //     .args(vec!["-vframes", "1"])
+                //     .arg(save_path.to_str().unwrap());
+
+                // let args = cmd.get_args()
+                // .filter_map(|s| {
+                //   s.to_str().map(|s| {
+                //     if s.starts_with('-') {
+                //       format!("\\\n  {s}")
+                //     } else {
+                //       s.to_owned()
+                //     }
+                //   })
+                // })
+                // .collect::<Vec<_>>();
+                // println!("Args: {:?} {:?}", relative_command_path("ffmpeg"), args);
 
                 // if let Err(err) = cmd.spawn() {
                 //     eprintln!("Failed to start ffmpeg: {err}");
                 // }
 
                 // ffmpeg commands
-                let mut ffmpeg_cmd = FfmpegCommand::new();
+                let cmd = Command::new_sidecar("ffmpeg").unwrap().args(vec!["-ss", "0.5"])
+                .args(vec!["-t", "2"])
+                .args(vec!["-f", "avfoundation"])
+                .args(vec!["-framerate", "30"])
+                .args(vec!["-i", &device_index])
+                .args(vec!["-vframes", "1", save_path.to_str().unwrap()]);
 
-                    ffmpeg_cmd.arg("-y")
-                    .args(vec!["-ss", "0.5"])
-                    .args(vec!["-t", "2"])
-                    .args(vec!["-f", "avfoundation"])
-                    .args(vec!["-framerate", "30"])
-                    .args(vec!["-i", &device_index])
-                    .args(vec!["-vframes", "1"])
-                    .arg(save_path.to_str().unwrap());
-                ffmpeg_cmd.print_command();
+                let (mut rx, mut child) = cmd.spawn().expect("Failed to run Ffmpeg binary");
+                // read events such as stdout
+                  while let Some(event) = rx.recv().await {
+                    match event {
+                        CommandEvent::Stdout(line) =>  {
+                          println!("{line}");
+                          child.write("message from Rust\n".as_bytes()).unwrap();
+                        },
+                        CommandEvent::Stderr(err) => {
+                          // write to stdin
+                          println!("{err}");
+                          child.write("message from Rust\n".as_bytes()).unwrap();
+                        },
+                        CommandEvent::Error(data) => {
+                            println!("Error: {:?}", data);
+                        },
+                        CommandEvent::Terminated(data) => {
+                            println!("Terminated: {:?}", data);
+                        },
+                        _ => {}
+                    }
+                  }
 
-                ffmpeg_cmd.spawn().unwrap_or_else(|err| {
-                    println!("Failed to run command: {:?}", err);
-                    panic!("Failed to start Ffmpeg: {:?}", err);
-                });
+                // let mut ffmpeg_cmd = FfmpegCommand::new();
+                // let cmd = ffmpeg_cmd
+                    // .args(vec!["-ss", "0.5"])
+                    // .args(vec!["-t", "2"])
+                    // .args(vec!["-f", "avfoundation"])
+                    // .args(vec!["-framerate", "30"])
+                    // .args(vec!["-i", &device_index])
+                    // .args(vec!["-vframes", "1"])
+                    // .arg(save_path.to_str().unwrap());
+                // let cmd = cmd.print_command();
+
+
+                // cmd.spawn().unwrap_or_else(|err| {
+                //     println!("Failed to run command: {:?}", err);
+                //     panic!("Failed to start Ffmpeg: {:?}", err);
+                // });
 
                 // let mut cmd = Command::new("ffmpeg --version").spawn().unwrap_or_else(|err| {
                 //     // println!("Failed to run command: {:?}", err);
@@ -405,7 +447,7 @@ impl TimeCapsule {
         let mut shutdown_signal_received = false;
 
         tokio::select! {
-            _ = timeout => println!("Sessioon Timeout"),
+            _ = timeout => println!("Session Timeout"),
             _ = shutdown.recv() => {
                 shutdown_signal_received = true;
                 println!("Shutdown signal received");
@@ -427,6 +469,16 @@ impl TimeCapsule {
             "Exited: {}",
             self.exited.load(sync::atomic::Ordering::SeqCst)
         );
+    }
+}
+
+fn relative_command_path(command: impl AsRef<Path>) -> crate::Result<PathBuf> {
+    match platform::current_exe()?.parent() {
+        #[cfg(windows)]
+        Some(exe_dir) => Ok(exe_dir.join(command.as_ref()).with_extension("exe")),
+        #[cfg(not(windows))]
+        Some(exe_dir) => Ok(exe_dir.join(command.as_ref())),
+        None => Err("Error::CurrentExeHasNoParent".into()),
     }
 }
 
@@ -453,7 +505,7 @@ async fn save_capsule(time_capsule: TimeCapsule) -> crate::Result<()> {
         keystrokes: keystrokes.read().unwrap().clone(),
     };
 
-    dbg!(&value);
+    // dbg!(&value);
 
     let path = storage_path.to_str().unwrap();
 

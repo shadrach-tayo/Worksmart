@@ -12,10 +12,12 @@
   "tauri": {
     "macOSPrivateApi": true,
     "allowlist": {
-      "all": false,
+      "all": true,
       "shell": {
-        "all": false,
-        "open": true
+        "all": true,
+        "open": true,
+        "sidecar": true,
+        "scope": [{ "name": "binaries/ffmpeg", "sidecar": true }]
       },
       "window": {
         "startDragging": true
@@ -39,9 +41,7 @@
       "macOS": {
         "signingIdentity": "-"
       },
-      "externalBin": [
-        "./target/debug/ffmpeg"
-      ]
+      "externalBin": ["../target/binaries/ffmpeg"]
     },
     "updater": {
       "active": true,
