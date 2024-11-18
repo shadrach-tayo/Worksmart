@@ -38,7 +38,10 @@
       ],
       "macOS": {
         "signingIdentity": "-"
-      }
+      },
+      "externalBin": [
+        "./target/debug/ffmpeg"
+      ]
     },
     "updater": {
       "active": true,

@@ -1,14 +1,27 @@
 // #![allow(unused_imports)]
 use std::{
-     path::PathBuf, process::Command, sync::{self, atomic::{AtomicBool, Ordering}, Arc, Mutex, RwLock}, time::Duration
+    io::Read,
+    path::PathBuf,
+    process::Command,
+    sync::{
+        self,
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex, RwLock,
+    },
+    time::Duration,
 };
 
+use crate::{
+    get_current_datetime, get_focused_window, get_folder_datetime,
+    screen_capture::{ScreenCapture, ScreenshotOptions},
+    storage, AppState, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap,
+};
 use chrono::Utc;
+use ffmpeg_sidecar::command::FfmpegCommand;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tokio::sync::broadcast;
-use crate::{get_current_datetime, get_focused_window, get_folder_datetime, screen_capture::{ScreenCapture, ScreenshotOptions}, storage, AppState, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap};
 
 pub type SessionChannel = tokio::sync::broadcast::Sender<()>;
 pub type SessionState = Arc<Mutex<Session>>;
@@ -65,7 +78,8 @@ impl Session {
 
         while !is_shutdown {
             let id = get_folder_datetime(); //gen_rand_string(16);
-            let dir =  app.state::<GeneralConfig>()
+            let dir = app
+                .state::<GeneralConfig>()
                 .lock()
                 .unwrap()
                 .capsule_storage_dir
@@ -126,11 +140,20 @@ impl Session {
                 }
 
                 let diff = end_ts - start_ts;
-                handle.state::<TimeTrackerMap>().lock().unwrap().increment_track_for_today(diff);
+                handle
+                    .state::<TimeTrackerMap>()
+                    .lock()
+                    .unwrap()
+                    .increment_track_for_today(diff);
                 handle.state::<TimeTrackerMap>().lock().unwrap().save();
             });
 
-            if app.state::<SessionControllerState>().lock().unwrap().is_shutdown() {
+            if app
+                .state::<SessionControllerState>()
+                .lock()
+                .unwrap()
+                .is_shutdown()
+            {
                 is_shutdown = true;
             }
             dbg!(is_shutdown);
@@ -236,24 +259,27 @@ impl TimeCapsule {
 
             if active_window.is_some() {
                 let win = active_window.clone().unwrap();
-                active_windows
-                    .write()
-                    .unwrap()
-                    .push(WindowEntry { name: win.app_name, title: win.title, time: get_current_datetime().to_rfc3339() });
+                active_windows.write().unwrap().push(WindowEntry {
+                    name: win.app_name,
+                    title: win.title,
+                    time: get_current_datetime().to_rfc3339(),
+                });
             }
 
             while !exited.load(sync::atomic::Ordering::SeqCst) {
                 tokio::time::sleep(Duration::from_secs(log_delay_in_seconds)).await;
                 if let Some(window) = get_focused_window() {
-                    if active_window.is_some() && active_window.clone().unwrap().app_name != window.app_name.as_str() {
+                    if active_window.is_some()
+                        && active_window.clone().unwrap().app_name != window.app_name.as_str()
+                    {
                         active_window = Some(window.clone());
-                        active_windows
-                            .write()
-                            .unwrap()
-                            .push(WindowEntry { name: window.app_name, title: window.title, time: get_current_datetime().to_rfc3339() });
+                        active_windows.write().unwrap().push(WindowEntry {
+                            name: window.app_name,
+                            title: window.title,
+                            time: get_current_datetime().to_rfc3339(),
+                        });
                     }
                 }
-
             }
         };
         tokio::spawn(active_window_logger);
@@ -277,13 +303,25 @@ impl TimeCapsule {
             }
             if let Err(err) = ScreenCapture::take_screenshot(ScreenshotOptions {
                 output: media_storage_path.to_path_buf(),
-            }).await {
-                eprintln!("Error taking screenshot {:?}, time: {}", get_focused_window().unwrap(), get_current_datetime());
+            })
+            .await
+            {
+                eprintln!(
+                    "Error taking screenshot {:?}, time: {}",
+                    get_focused_window().unwrap(),
+                    get_current_datetime()
+                );
                 eprintln!("Error: {:?}", err);
             }
         });
 
-        let device_index = app_handle.state::<SelectedDevice>().lock().unwrap().clone().index().as_string();
+        let device_index = app_handle
+            .state::<SelectedDevice>()
+            .lock()
+            .unwrap()
+            .clone()
+            .index()
+            .as_string();
 
         let webcam_storage_path = Arc::clone(&storage_path);
 
@@ -309,24 +347,55 @@ impl TimeCapsule {
             #[cfg(target_os = "macos")]
             {
                 let mut cmd = Command::new("ffmpeg");
-                cmd.args(vec!["-ss", "0.5"])
+                cmd.arg("-y")
+                    .args(vec!["-ss", "0.5"])
                     .args(vec!["-t", "2"])
                     .args(vec!["-f", "avfoundation"]);
 
-                let id = uuid::Uuid::new_v4().to_string();
-                let save_path = webcam_storage_path.join(
-                    format!("{}_{}_{}.{}", "portrait", &id, get_current_datetime().to_rfc3339(), "png")
-                );
+                // let id = uuid::Uuid::new_v4().to_string();
+                let save_path = webcam_storage_path.join("portrait.png");
+                // let save_path = webcam_storage_path.join(
+                //     format!("{}_{}.{}", "portrait", get_current_datetime().to_rfc3339(), "png")
+                // );
+                println!("Take snapshot: {:?}", save_path);
                 cmd.args(vec!["-framerate", "30"])
-                    .arg("-i")
-                    .arg(&device_index)
+                    .args(vec!["-i", &device_index])
                     .args(vec!["-vframes", "1"])
-                    .arg(save_path.to_str().unwrap())
-                    .arg("-y");
+                    .arg(save_path.to_str().unwrap());
 
-                if let Err(err) = cmd.spawn() {
-                    eprintln!("Webcam snapshot error: {err}");
-                }
+                // if let Err(err) = cmd.spawn() {
+                //     eprintln!("Failed to start ffmpeg: {err}");
+                // }
+
+                // ffmpeg commands
+                let mut ffmpeg_cmd = FfmpegCommand::new();
+
+                    ffmpeg_cmd.arg("-y")
+                    .args(vec!["-ss", "0.5"])
+                    .args(vec!["-t", "2"])
+                    .args(vec!["-f", "avfoundation"])
+                    .args(vec!["-framerate", "30"])
+                    .args(vec!["-i", &device_index])
+                    .args(vec!["-vframes", "1"])
+                    .arg(save_path.to_str().unwrap());
+                ffmpeg_cmd.print_command();
+
+                ffmpeg_cmd.spawn().unwrap_or_else(|err| {
+                    println!("Failed to run command: {:?}", err);
+                    panic!("Failed to start Ffmpeg: {:?}", err);
+                });
+
+                // let mut cmd = Command::new("ffmpeg --version").spawn().unwrap_or_else(|err| {
+                //     // println!("Failed to run command: {:?}", err);
+                //     panic!("Failed to start Ffmpeg: {:?}", err);
+                // });
+
+                // // let mut buf = [0; 4096];
+                // let mut output = String::new();
+                // match ffmpeg_cmd.stdout.take().unwrap().read_to_string(&mut output) {
+                //     Ok(_) => println!("FFmpeg output: {output}"),
+                //     Err(err) => println!("Err: {:?}", err)
+                // }
             }
         });
 
@@ -353,13 +422,15 @@ impl TimeCapsule {
     }
 
     pub fn exit(&mut self) {
-        self.exited.store(true ,sync::atomic::Ordering::SeqCst);
-        println!("Exited: {}", self.exited.load(sync::atomic::Ordering::SeqCst));
+        self.exited.store(true, sync::atomic::Ordering::SeqCst);
+        println!(
+            "Exited: {}",
+            self.exited.load(sync::atomic::Ordering::SeqCst)
+        );
     }
 }
 
 async fn save_capsule(time_capsule: TimeCapsule) -> crate::Result<()> {
-
     let TimeCapsule {
         id,
         windows,
@@ -371,7 +442,6 @@ async fn save_capsule(time_capsule: TimeCapsule) -> crate::Result<()> {
         storage_path,
         exited: _,
     } = time_capsule;
-
 
     let value = StorageTimeCapsule {
         id,

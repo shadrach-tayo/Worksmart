@@ -8,7 +8,7 @@ use crate::get_current_datetime;
 pub fn get_focused_window() -> Option<ActiveWindow> {
     match get_active_window() {
             Ok(active_window) => {
-                println!("active window: {:#?}", active_window);
+                // println!("active window: {:#?}", active_window);
                 Some(active_window)
             },
             Err(()) => {

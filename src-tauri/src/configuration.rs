@@ -50,7 +50,7 @@ pub struct Preferences {
 impl Default for Preferences {
     fn default() -> Self {
         Self {
-            time_gap_duration_in_seconds: 600,
+            time_gap_duration_in_seconds: 60,
         }
     }
 }
