@@ -1,18 +1,19 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 // use dcv_color_primitives::convert_image;
 // use gst::prelude::*;
 use image::{ImageBuffer, Rgb};
 // use nokhwa::pixel_format::RgbFormat;
-use nokhwa::utils::{ CameraInfo, RequestedFormat,
-    RequestedFormatType, Resolution,
-};
+use nokhwa::utils::{CameraInfo, RequestedFormat, RequestedFormatType, Resolution};
 use nokhwa::Camera;
 use nokhwa::{native_api_backend, pixel_format, NokhwaError};
 
 use serde::{Deserialize, Serialize};
+use tauri::utils::platform;
 
-use crate::get_current_datetime;
+use crate::{compressor, get_current_datetime};
+
+use tauri::api::process::{Command, CommandEvent, TerminatedPayload};
 
 pub fn get_default_camera() -> crate::Result<CameraInfo> {
     let backend = native_api_backend().unwrap();
@@ -31,7 +32,10 @@ pub fn create_camera(info: &CameraInfo) -> Result<Camera, NokhwaError> {
     // let camera_format = CameraFormat::new(resolution, f_format, fps);
 
     let requested = RequestedFormat::new::<pixel_format::RgbFormat>(
-        RequestedFormatType::ClosestIgnoringFormat { resolution, frame_rate }
+        RequestedFormatType::ClosestIgnoringFormat {
+            resolution,
+            frame_rate,
+        },
     );
     dbg!(&requested);
 
@@ -44,15 +48,17 @@ pub fn find_camera(selected_device: &String) -> Result<CameraInfo, String> {
     println!("There are {} available cameras.", devices.len());
     dbg!(&devices);
 
-    devices.into_iter().find(|device| &device.human_name() == selected_device)
+    devices
+        .into_iter()
+        .find(|device| &device.human_name() == selected_device)
         .ok_or(format!("Cannot find selected device: {}", selected_device))
 }
 
 pub fn find_and_create_camera(selected_device: &String) -> Result<(CameraInfo, Camera), String> {
     let info = find_camera(selected_device)?;
     let camera = create_camera(&info).map_err(|err| err.to_string())?;
-     dbg!(camera.camera_format());
-     dbg!(camera.frame_format());
+    dbg!(camera.camera_format());
+    dbg!(camera.frame_format());
 
     Ok((info, camera))
 }
@@ -65,7 +71,7 @@ pub fn find_and_create_camera(selected_device: &String) -> Result<(CameraInfo, C
 pub struct CameraSnapshotOptions {
     pub save_path: PathBuf,
     // pub id: String,
-    pub selected_device: String
+    pub selected_device: String,
 }
 
 #[derive(Debug, Clone)]
@@ -79,53 +85,109 @@ impl CameraController {
             return Err("Permission required!".into());
         }
 
-        let id = uuid::Uuid::new_v4().to_string();
+        let save_path = options.save_path.clone().join("portrait.png");
 
-        // make the camera
-        let (info, mut camera) = find_and_create_camera(&options.selected_device)?;
-        dbg!(info);
+        #[cfg(target_os = "macos")]
+        {
+            let mut cmd = std::process::Command::new(relative_command_path("ffmpeg").unwrap());
 
-        camera.open_stream().unwrap();
+            cmd.args(vec!["-ss", "0.5"])
+                .args(vec!["-t", "2"])
+                .args(vec!["-f", "avfoundation"])
+                .args(vec!["-framerate", "30"])
+                .args(vec!["-i", &options.selected_device])
+                .args(vec!["-vf", "scale=720:-1,setdar=16/9"])
+                .args(vec!["-vframes", "1", save_path.to_str().unwrap()]);
 
-        // get a frame
-        println!(
-            "Frame format: {:?}, camera_format: {:?}",
-            camera.frame_format(),
-            camera.camera_format()
-        );
-        let frame = camera.frame().unwrap();
-        camera.stop_stream().unwrap();
-        println!("Captured Single Frame of {}", frame.buffer().len());
+            let args = cmd
+                .get_args()
+                .filter_map(|s| {
+                    s.to_str().map(|s| {
+                        if s.starts_with('-') {
+                            format!("\\\n  {s}")
+                        } else {
+                            s.to_owned()
+                        }
+                    })
+                })
+                .collect::<Vec<_>>();
+            println!("Args: {:?} {:?}", relative_command_path("ffmpeg"), args);
 
-        let path = options.save_path.join(
-            format!("{}_{}_{}.{}", "webcam_debug", &id, get_current_datetime().to_rfc3339(), "jpg")
-        );
-        match convert_buffer_to_image(frame.clone()) {
-            Ok(image) => {
-                if let Err(err) = image.save(path) {
-                    println!("Error saving webcam image {:?}", err);
+            if let Err(err) = cmd.spawn() {
+                eprintln!("Failed to start ffmpeg: {err}");
+            } else {
+                compressor::compress_image(
+                    save_path.clone(),
+                    options.save_path.clone().to_path_buf(),
+                );
+            }
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            // make the camera
+            let (info, mut camera) = find_and_create_camera(&options.selected_device)?;
+            dbg!(info);
+
+            camera.open_stream().unwrap();
+
+            // get a frame
+            println!(
+                "Frame format: {:?}, camera_format: {:?}",
+                camera.frame_format(),
+                camera.camera_format()
+            );
+            let frame = camera.frame().unwrap();
+            camera.stop_stream().unwrap();
+            println!("Captured Single Frame of {}", frame.buffer().len());
+
+            let path = save_path.clone();
+
+            match convert_buffer_to_image(frame.clone()) {
+                Ok(image) => {
+                    if let Err(err) = image.save(path) {
+                        println!("Error saving webcam image {:?}", err);
+                    } else {
+                        compressor::compress_image(
+                            save_path.clone(),
+                            options.save_path.clone().to_path_buf(),
+                        );
+                    }
                 }
-            }
-            Err(err) => {
-                println!("Error saving webcam image {:?}", err);
-            }
-        };
+                Err(err) => {
+                    eprintln!("Error saving webcam image {:?}", err);
+                }
+            };
 
-        // decode into an ImageBuffer
-        let decoded = frame.decode_image::<pixel_format::RgbFormat>().unwrap();
-        println!("Decoded Frame of {}", decoded.len());
+            // decode into an ImageBuffer
+            let decoded = frame.decode_image::<pixel_format::RgbFormat>().unwrap();
+            println!("Decoded Frame of {}", decoded.len());
 
-        let path = options.save_path.join(
-            format!("{}_{}_{}.{}", "webcam", {id}, get_current_datetime().to_rfc3339(), "jpg")
-        );
-        if let Err(err) = decoded.save(path) {
-            println!("Error saving webcam image {:?}", err);
+            let path = save_path.clone();
+
+            if let Err(err) = decoded.save(path) {
+                eprintln!("Error saving webcam image {:?}", err);
+            } else {
+                compressor::compress_image(
+                    save_path.clone(),
+                    options.save_path.clone().to_path_buf(),
+                );
+            }
         }
 
         Ok(())
     }
 }
 
+fn relative_command_path(command: impl AsRef<Path>) -> crate::Result<PathBuf> {
+    match platform::current_exe()?.parent() {
+        #[cfg(windows)]
+        Some(exe_dir) => Ok(exe_dir.join(command.as_ref()).with_extension("exe")),
+        #[cfg(not(windows))]
+        Some(exe_dir) => Ok(exe_dir.join(command.as_ref())),
+        None => Err("Error::CurrentExeHasNoParent".into()),
+    }
+}
 
 fn convert_buffer_to_image(
     buffer: nokhwa::Buffer,

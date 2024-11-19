@@ -43,7 +43,7 @@ async function main() {
   const binaries = FFMPEG_BINARIES[targetTriple];
   if (!binaries) return;
 
-  const ffmpegDownloadPath = path.join(binariesDir, "ffmpeg-download");
+  const ffmpegDownloadPath = path.join(binariesDir, "ffmpeg-download.zip");
   if (!(await exists(ffmpegDownloadPath))) {
     await fs.mkdir(binariesDir, { recursive: true });
     console.log("downloading ffmpeg archive");
