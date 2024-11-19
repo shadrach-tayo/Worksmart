@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use active_win_pos_rs::{get_active_window, ActiveWindow};
 use xcap::Monitor;
 
-use crate::get_current_datetime;
+use crate::{compressor, get_current_datetime};
 
 pub fn get_focused_window() -> Option<ActiveWindow> {
     match get_active_window() {
@@ -55,6 +55,8 @@ impl ScreenCapture {
 
             if file.is_ok() {
                 image.save(&img_path).unwrap();
+                // image compression
+                compressor::compress_image(img_path, options.output.clone());
             } else {
                 // save to error log and stream to server later
                 println!("Error saving screenshot to dir: {:?}", img_path);

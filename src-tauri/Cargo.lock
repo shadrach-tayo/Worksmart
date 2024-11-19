@@ -1359,6 +1359,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-queue"
+version = "0.3.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df0346b5d5e76ac2fe4e327c5fd1118d6be7c51dfb18f9b7922923f287471e35"
+dependencies = [
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "crossbeam-utils"
 version = "0.8.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2710,6 +2719,18 @@ checksum = "f79afb8cbee2ef20f59ccd477a218c12a93943d075b492015ecb1bb81f8ee904"
 dependencies = [
  "byteorder-lite",
  "quick-error",
+]
+
+[[package]]
+name = "image_compressor"
+version = "1.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "061f170cc29da8bc05545d18857c725aa9b5c5f90f68433b04f73cecc64926ee"
+dependencies = [
+ "crossbeam-queue",
+ "image 0.25.2",
+ "mozjpeg",
+ "rand 0.8.5",
 ]
 
 [[package]]
@@ -7363,6 +7384,7 @@ dependencies = [
  "ffmpeg-sidecar",
  "iana-time-zone",
  "image 0.25.2",
+ "image_compressor",
  "nokhwa",
  "nokhwa-bindings-macos 0.2.0 (git+https://github.com/CapSoftware/nokhwa?rev=0d3d1f30a78b)",
  "objc",

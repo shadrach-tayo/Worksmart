@@ -11,15 +11,13 @@ use std::{
 };
 
 use crate::{
-    get_current_datetime, get_focused_window, get_folder_datetime,
-    screen_capture::{ScreenCapture, ScreenshotOptions},
-    storage, AppState, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap,
+    compressor, get_current_datetime, get_focused_window, get_folder_datetime, screen_capture::{ScreenCapture, ScreenshotOptions}, storage, AppState, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap
 };
 use chrono::Utc;
 use ffmpeg_sidecar::command::FfmpegCommand;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
-use tauri::{api::process::{Command, CommandEvent}, utils::platform, AppHandle, Manager};
+use tauri::{api::process::{Command, CommandEvent, TerminatedPayload}, utils::platform, AppHandle, Manager};
 use tokio::sync::broadcast;
 
 pub type SessionChannel = tokio::sync::broadcast::Sender<()>;
@@ -345,70 +343,76 @@ impl TimeCapsule {
 
             #[cfg(target_os = "macos")]
             {
-                // let mut cmd = Command::new(relative_command_path("ffmpeg").unwrap());
-                // cmd.arg("-y")
-                //     .args(vec!["-ss", "0.5"])
-                //     .args(vec!["-t", "2"])
-                //     .args(vec!["-f", "avfoundation"]);
+                // let save_path = webcam_storage_path.join("portrait.png");
+                let save_path = webcam_storage_path.join(
+                    format!("{}_{}.{}", "portrait", get_current_datetime().to_rfc3339(), "png")
+                );
+                let mut cmd = std::process::Command::new(relative_command_path("ffmpeg").unwrap());
 
-                // // let id = uuid::Uuid::new_v4().to_string();
-                let save_path = webcam_storage_path.join("portrait.png");
-                // // let save_path = webcam_storage_path.join(
-                // //     format!("{}_{}.{}", "portrait", get_current_datetime().to_rfc3339(), "png")
-                // // );
-                // println!("Take snapshot: {:?}", save_path);
-                // cmd.args(vec!["-framerate", "30"])
-                //     .args(vec!["-i", &device_index])
-                //     .args(vec!["-vframes", "1"])
-                //     .arg(save_path.to_str().unwrap());
+                cmd.args(vec!["-ss", "0.5"])
+                    .args(vec!["-t", "2"])
+                    .args(vec!["-f", "avfoundation"])
+                    .args(vec!["-framerate", "30"])
+                    .args(vec!["-i", &device_index])
+                    .args(vec!["-vf", "scale=720:-1,setdar=16/9"])
+                    .args(vec!["-vframes", "1", save_path.to_str().unwrap()]);
 
-                // let args = cmd.get_args()
-                // .filter_map(|s| {
-                //   s.to_str().map(|s| {
-                //     if s.starts_with('-') {
-                //       format!("\\\n  {s}")
-                //     } else {
-                //       s.to_owned()
-                //     }
-                //   })
-                // })
-                // .collect::<Vec<_>>();
-                // println!("Args: {:?} {:?}", relative_command_path("ffmpeg"), args);
+                let args = cmd.get_args()
+                .filter_map(|s| {
+                  s.to_str().map(|s| {
+                    if s.starts_with('-') {
+                      format!("\\\n  {s}")
+                    } else {
+                      s.to_owned()
+                    }
+                  })
+                })
+                .collect::<Vec<_>>();
+                println!("Args: {:?} {:?}", relative_command_path("ffmpeg"), args);
 
-                // if let Err(err) = cmd.spawn() {
-                //     eprintln!("Failed to start ffmpeg: {err}");
-                // }
+                if let Err(err) = cmd.spawn() {
+                    eprintln!("Failed to start ffmpeg: {err}");
+                } else {
+                    compressor::compress_image(save_path.clone(), webcam_storage_path.to_path_buf());
+                }
 
                 // ffmpeg commands
-                let cmd = Command::new_sidecar("ffmpeg").unwrap().args(vec!["-ss", "0.5"])
-                .args(vec!["-t", "2"])
-                .args(vec!["-f", "avfoundation"])
-                .args(vec!["-framerate", "30"])
-                .args(vec!["-i", &device_index])
-                .args(vec!["-vframes", "1", save_path.to_str().unwrap()]);
+                // let cmd = Command::new_sidecar("ffmpeg").unwrap().args(vec!["-ss", "0.5"])
+                // .args(vec!["-t", "2"])
+                // .args(vec!["-f", "avfoundation"])
+                // .args(vec!["-framerate", "30"])
+                // .args(vec!["-i", &device_index])
+                // .args(vec!["-vf", "scale=720:-1,setdar=16/9"])
+                // .args(vec!["-vframes", "1", save_path.clone().to_str().unwrap()]);
 
-                let (mut rx, mut child) = cmd.spawn().expect("Failed to run Ffmpeg binary");
-                // read events such as stdout
-                  while let Some(event) = rx.recv().await {
-                    match event {
-                        CommandEvent::Stdout(line) =>  {
-                          println!("{line}");
-                          child.write("message from Rust\n".as_bytes()).unwrap();
-                        },
-                        CommandEvent::Stderr(err) => {
-                          // write to stdin
-                          println!("{err}");
-                          child.write("message from Rust\n".as_bytes()).unwrap();
-                        },
-                        CommandEvent::Error(data) => {
-                            println!("Error: {:?}", data);
-                        },
-                        CommandEvent::Terminated(data) => {
-                            println!("Terminated: {:?}", data);
-                        },
-                        _ => {}
-                    }
-                  }
+                // let (mut rx, mut child) = cmd.spawn().expect("Failed to run Ffmpeg binary");
+                // // read events such as stdout
+                // while let Some(event) = rx.recv().await {
+                //     match event {
+                //         CommandEvent::Stdout(line) =>  {
+                //             println!("{line}");
+                //             child.write("message from Rust\n".as_bytes()).unwrap();
+                //         },
+                //         CommandEvent::Stderr(err) => {
+                //             // write to stdin
+                //             eprintln!("{err}");
+                //             child.write("message from Rust\n".as_bytes()).unwrap();
+                //         },
+                //         CommandEvent::Error(data) => {
+                //             eprintln!("Error: {:?}", data);
+                //         },
+                //         CommandEvent::Terminated(data) if data.code == Some(0) => {
+                //             println!("Terminated: {:?}", data);
+
+                //             // image compression
+                //             compressor::compress_image(save_path.clone(), webcam_storage_path.to_path_buf());
+                //         },
+                //         CommandEvent::Terminated(data) => {
+                //             eprintln!("Terminated: {:?}", data);
+                //         },
+                //         _ => {}
+                //     }
+                // }
 
                 // let mut ffmpeg_cmd = FfmpegCommand::new();
                 // let cmd = ffmpeg_cmd

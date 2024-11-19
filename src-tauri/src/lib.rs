@@ -15,6 +15,7 @@ pub mod encoder;
 pub mod screen_capture;
 pub mod time_map;
 pub mod permissions;
+pub mod compressor;
 
 pub use auth::*;
 pub use autostart::*;
@@ -32,3 +33,4 @@ pub use windows::*;
 pub use screen_capture::get_focused_window;
 pub use time_map::*;
 pub use permissions::*;
+pub use compressor::compress_image;

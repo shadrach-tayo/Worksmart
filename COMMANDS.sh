@@ -7,3 +7,6 @@ cn release upload notor/worksmart 01JCCS5MHTP73PYW1N1AYT7PSM --framework tauri
 # start transcoding at -ss 0.5 and stop at -t 2
 # -y overwrite output file
 ffmpeg -y -ss 0.5 -t 2 -f avfoundation -framerate 30 -i "0" -vframes 1 filename.png
+
+
+ffmpeg -y -ss 0.5 -t 2 -f avfoundation -framerate 30 -i "0" -vf scale=720:-1,setdar=16/9 -vframes 1 portrait.png
