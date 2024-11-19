@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::process::ExitStatus;
 
 // use dcv_color_primitives::convert_image;
 // use gst::prelude::*;
@@ -99,28 +100,36 @@ impl CameraController {
                 .args(vec!["-vf", "scale=720:-1,setdar=16/9"])
                 .args(vec!["-vframes", "1", save_path.to_str().unwrap()]);
 
-            let args = cmd
-                .get_args()
-                .filter_map(|s| {
-                    s.to_str().map(|s| {
-                        if s.starts_with('-') {
-                            format!("\\\n  {s}")
-                        } else {
-                            s.to_owned()
-                        }
-                    })
-                })
-                .collect::<Vec<_>>();
-            println!("Args: {:?} {:?}", relative_command_path("ffmpeg"), args);
+            // let args = cmd
+            //     .get_args()
+            //     .filter_map(|s| {
+            //         s.to_str().map(|s| {
+            //             if s.starts_with('-') {
+            //                 format!("\\\n  {s}")
+            //             } else {
+            //                 s.to_owned()
+            //             }
+            //         })
+            //     })
+            //     .collect::<Vec<_>>();
+            // println!("Args: {:?} {:?}", relative_command_path("ffmpeg"), args);
 
-            if let Err(err) = cmd.spawn() {
-                eprintln!("Failed to start ffmpeg: {err}");
-            } else {
-                compressor::compress_image(
-                    save_path.clone(),
-                    options.save_path.clone().to_path_buf(),
-                );
+            let mut child = cmd
+                .spawn()
+                .unwrap_or_else(|err| panic!("Ffmpeg command not found"));
+            
+            match child.wait() {
+                Ok(status) if status.success() => {
+                    println!("exited with: {status}");
+                    compressor::compress_image(
+                        save_path.clone(),
+                        options.save_path.clone().to_path_buf(),
+                    );
+                }
+                Ok(status) => eprintln!("exited with: {status}"),
+                Err(e) => println!("error attempting to wait: {e}"),
             }
+            
         }
 
         #[cfg(not(target_os = "macos"))]

@@ -55,6 +55,7 @@ nokhwa-bindings-macos = { git = "https://github.com/CapSoftware/nokhwa", rev = "
 tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", branch = "v1" }
 ffmpeg-sidecar = "2.0.2"
 image_compressor = "1.5.2"
+serde_json = "1.0.133"
 
 
 [features]

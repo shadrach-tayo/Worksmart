@@ -83,8 +83,10 @@ pub fn save_to_data_path<D>(data: &D, dir: PathBuf)
 where
     D: Serialize,
 {
-    let data: Vec<u8> = bincode::serialize(data).unwrap();
-    std::fs::write(data_path().join(dir), data).expect("Can't save app configuration");
+    let data = serde_json::json!(data);
+    let mut bytes: Vec<u8> = Vec::new();
+    serde_json::to_writer(&mut bytes, &data).unwrap();
+    std::fs::write(data_path().join(dir), bytes).expect("Can't save app configuration");
 }
 
 pub fn load<D>() -> crate::Result<D>
