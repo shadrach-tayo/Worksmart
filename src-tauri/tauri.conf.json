@@ -1,7 +1,7 @@
 {
   "build": {
     "beforeDevCommand": "yarn dev",
-    "beforeBuildCommand": "yarn build",
+    "beforeBuildCommand": "node src-tauri/scripts/prepareSidecars.js && yarn build",
     "devPath": "http://localhost:1420",
     "distDir": "../dist"
   },
