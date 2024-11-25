@@ -38,8 +38,9 @@ export async function stop_session(): Promise<boolean> {
 }
 
 export async function webcam_capture() {
-  const result = await invoke("webcam_capture");
+  const result = (await invoke("webcam_capture")) as string;
   console.log("result: ", result);
+  return result;
 }
 
 export async function login() {

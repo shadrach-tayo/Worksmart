@@ -21,6 +21,18 @@
       },
       "window": {
         "startDragging": true
+      },
+      "path": {
+        "all": true
+      },
+      "fs": {
+        "all": true,
+        "scope": ["**/*"]
+      },
+      "protocol": {
+        "all": true,
+        "asset": true,
+        "assetScope": ["**/*"]
       }
     },
     "security": {

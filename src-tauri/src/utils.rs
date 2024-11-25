@@ -1,6 +1,5 @@
 use std::{
-    hash::{Hash, Hasher},
-    time::{SystemTime, UNIX_EPOCH},
+    hash::{Hash, Hasher}, path::Path, time::{SystemTime, UNIX_EPOCH}
 };
 
 use chrono::{DateTime, Datelike, Timelike, Utc};
@@ -46,4 +45,8 @@ pub fn gen_rand_number() -> u32 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     time_ms.hash(&mut hasher);
     hasher.finish() as u32
+}
+
+pub fn path_exists<P: AsRef<Path>>(path: P) -> bool {
+    std::fs::metadata(path).map_or(false, |_| true)
 }

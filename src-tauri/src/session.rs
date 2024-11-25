@@ -1,6 +1,6 @@
 // #![allow(unused_imports)]
 use std::{
-    path::{Path, PathBuf},
+    path::PathBuf,
     // process::Command,
     sync::{
         self,
@@ -11,12 +11,12 @@ use std::{
 };
 
 use crate::{
-    compressor, get_current_datetime, get_focused_window, get_folder_datetime, screen_capture::{ScreenCapture, ScreenshotOptions}, storage, AppState, CameraController, CameraSnapshotOptions, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap
+    get_current_datetime, get_focused_window, get_folder_datetime, screen_capture::{ScreenCapture, ScreenshotOptions}, storage, AppState, CameraController, CameraSnapshotOptions, GeneralConfig, SelectedDevice, Shutdown, TimeTrackerMap
 };
 use chrono::Utc;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
-use tauri::{utils::platform, AppHandle, Manager};
+use tauri::{AppHandle, Manager};
 use tokio::sync::broadcast;
 
 pub type SessionChannel = tokio::sync::broadcast::Sender<()>;
@@ -332,14 +332,15 @@ impl TimeCapsule {
             if let Err(err) = CameraController
                 ::take_snapshot(
                     CameraSnapshotOptions {
-                        save_path: webcam_storage_path.to_path_buf(),
-                        selected_device: device_index
+                        compress: false,
+                        selected_device: device_index,
+                        save_path: webcam_storage_path.to_path_buf().join("portrait.png"),
                     }
                 ).await
             {
                 eprintln!("Webcam snapshot error: {err}");
             }
-            
+
         });
 
         let timeout = tokio::spawn(tokio::time::sleep(Duration::from_secs(time_gap_in_secs)));

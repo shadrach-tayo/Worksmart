@@ -25,6 +25,9 @@ const Settings = () => {
   const [selectedDevice, setSelectedDevices] = useState<string>(
     () => mockDevices[0],
   );
+  const [preview, setPreview] = useState<string>(
+    "https://placehold.co/150x175@3x/FFFFFF/png",
+  );
 
   const getPreferences = async () => {
     setPreferences(await get_preferences());
@@ -55,7 +58,6 @@ const Settings = () => {
       track_on_signin: form["trackOnSignin"].checked,
       enable_camera: form["enableCamera"].checked,
     } as Configuration;
-    console.log("values", config);
     await set_preferences(config);
     setPreferences(config);
   };
@@ -69,7 +71,8 @@ const Settings = () => {
   };
 
   const onCameraTest = async () => {
-    await webcam_capture();
+    const preview = await webcam_capture();
+    setPreview(`data:image/png;base64,${preview}`);
   };
 
   return (
@@ -142,9 +145,11 @@ const Settings = () => {
           <div className="col-6 col-md-6">
             <div className="mb-4">
               <img
-                src="https://placehold.co/150x175@3x/FFFFFF/png"
+                src={preview}
                 alt="Camera Preview"
                 className="camera-preview mb-3"
+                onError={(e) => console.warn("Preview error", e)}
+                onLoad={(e) => console.warn("Load", e)}
               />
             </div>
           </div>
@@ -180,11 +185,8 @@ const Settings = () => {
                 onChange={onDeviceSelectionChange}
               >
                 {cameraDevices.map((device) => (
-                  <option selected={device === selectedDevice}>{device}</option>
+                  <option key={device}>{device}</option>
                 ))}
-                {/* <option selected>FaceTime HD Camera</option>
-                                <option>Logitech Webcam</option>
-                                <option>External Camera</option> */}
               </select>
             </div>
 
@@ -192,10 +194,16 @@ const Settings = () => {
               <label htmlFor="delaySelect" className="form-label">
                 Delay (seconds)
               </label>
-              <select className="form-select" id="delaySelect">
-                <option selected>3 secs</option>
-                <option>5 secs</option>
-                <option>10 secs</option>
+              <select className="form-select" id="delaySelect" defaultValue={3}>
+                <option key="3" value={3}>
+                  3 secs
+                </option>
+                <option key="5" value={5}>
+                  5 secs
+                </option>
+                <option key="10" value={10}>
+                  10 secs
+                </option>
               </select>
             </div>
 

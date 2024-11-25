@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
-use std::process::ExitStatus;
 
+use base64::Engine;
 // use dcv_color_primitives::convert_image;
 // use gst::prelude::*;
 use image::{ImageBuffer, Rgb};
@@ -11,10 +11,11 @@ use nokhwa::{native_api_backend, pixel_format, NokhwaError};
 
 use serde::{Deserialize, Serialize};
 use tauri::utils::platform;
+use tokio::fs;
 
-use crate::{compressor, get_current_datetime};
+use crate::compressor;
 
-use tauri::api::process::{Command, CommandEvent, TerminatedPayload};
+// use tauri::api::process::{Command, CommandEvent, TerminatedPayload};
 
 pub fn get_default_camera() -> crate::Result<CameraInfo> {
     let backend = native_api_backend().unwrap();
@@ -73,20 +74,21 @@ pub struct CameraSnapshotOptions {
     pub save_path: PathBuf,
     // pub id: String,
     pub selected_device: String,
+    pub compress: bool
 }
 
 #[derive(Debug, Clone)]
 pub struct CameraController {}
 
 impl CameraController {
-    pub async fn take_snapshot(options: CameraSnapshotOptions) -> Result<(), String> {
+    pub async fn take_snapshot(options: CameraSnapshotOptions) -> Result<String, String> {
         let is_granted = nokhwa::nokhwa_check();
         if !is_granted {
             println!("Permission not granted: {is_granted}");
             return Err("Permission required!".into());
         }
 
-        let save_path = options.save_path.clone().join("portrait.png");
+        let save_path = options.save_path.clone();
 
         #[cfg(target_os = "macos")]
         {
@@ -116,20 +118,22 @@ impl CameraController {
 
             let mut child = cmd
                 .spawn()
-                .unwrap_or_else(|err| panic!("Ffmpeg command not found"));
-            
+                .unwrap_or_else(|err| panic!("Ffmpeg command not found {:?}", err));
+
             match child.wait() {
                 Ok(status) if status.success() => {
                     println!("exited with: {status}");
-                    compressor::compress_image(
-                        save_path.clone(),
-                        options.save_path.clone().to_path_buf(),
-                    );
+                    if options.compress {
+                        compressor::compress_image(
+                            save_path.clone(),
+                            options.save_path.clone().to_path_buf(),
+                        );
+                    }
                 }
                 Ok(status) => eprintln!("exited with: {status}"),
                 Err(e) => println!("error attempting to wait: {e}"),
-            }
-            
+            };
+
         }
 
         #[cfg(not(target_os = "macos"))]
@@ -184,7 +188,10 @@ impl CameraController {
             }
         }
 
-        Ok(())
+        let data = fs::read(options.save_path).await.map_err(|err| err.to_string())?;
+        println!("I'm here");
+        let result = base64::engine::general_purpose::STANDARD.encode(&data);
+        Ok(result)
     }
 }
 
@@ -198,6 +205,7 @@ fn relative_command_path(command: impl AsRef<Path>) -> crate::Result<PathBuf> {
     }
 }
 
+#[allow(dead_code)]
 fn convert_buffer_to_image(
     buffer: nokhwa::Buffer,
 ) -> Result<ImageBuffer<Rgb<u8>, Vec<u8>>, NokhwaError> {

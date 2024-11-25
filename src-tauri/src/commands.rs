@@ -38,7 +38,7 @@ use yuv::convert::ToRGB;
 use crate::session::SessionControllerState;
 use crate::time_map::{TimeTrackerMap, TrackHistory};
 // use crate::encoder::uyvy422_frame;
-use crate::{storage, windows, AppWindow, Auth, AuthConfig, CameraController, Configuration, PermisssionsStatus, SelectedDevice};
+use crate::{path_exists, storage, windows, AppWindow, Auth, AuthConfig, CameraController, Configuration, PermisssionsStatus, SelectedDevice};
 
 use crate::{
     configuration, gen_rand_string, get_current_datetime,
@@ -259,26 +259,40 @@ pub fn get_auth(auth_config: State<'_, AuthConfig>) -> Result<Option<Auth>, Stri
 
 
 #[tauri::command]
-pub fn webcam_capture(
+pub async fn webcam_capture(
     general_config: State<'_, GeneralConfig>,
     selected_device: State<'_, SelectedDevice>,
-) -> Result<(), String> {
+) -> Result<String, String> {
     let device = selected_device.lock().unwrap().clone();
-    let config = general_config.lock().unwrap();
-    let save_path = storage::data_path().join(config.media_storage_dir.clone());
+    let config = general_config.lock().unwrap().clone();
 
-    tauri::async_runtime::spawn(async move {
-        if let Err(err) = CameraController::
+    let save_path = storage::data_path().join(config.media_storage_dir);
+    let file_path = save_path.join("preview.png");
+
+    if path_exists(&file_path) {
+        std::fs::remove_file(&file_path).unwrap();
+    }
+
+    if !path_exists(&save_path) {
+        std::fs::create_dir_all(&save_path).unwrap();
+    }
+
+    // let preview = file_path.clone().to_str().unwrap().to_owned();
+
+    let img_data = CameraController::
             take_snapshot(
                 crate::CameraSnapshotOptions {
-                    save_path,
+                    save_path: file_path,
+                    compress: false,
                     selected_device: device.human_name() }
-            ).await {
-                eprint!("CameraController Error: {:?}", err);
-            }
-    });
+            ).await.map_err(|err| {
+                 eprint!("CameraController Error: {:?}", err);
+                 err.to_string()
+            })?;
+    // tauri::async_runtime::spawn(async move {
+    // });
 
-    Ok(())
+    Ok(img_data)
 }
 
 #[tauri::command]

@@ -7374,6 +7374,7 @@ dependencies = [
  "active-win-pos-rs",
  "anyhow",
  "auto-launch",
+ "base64 0.22.1",
  "bincode",
  "chrono",
  "chrono-tz",
