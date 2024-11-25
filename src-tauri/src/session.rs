@@ -179,12 +179,12 @@ impl TimeCapsule {
         shutdown: Shutdown,
     ) -> crate::Result<bool> {
         let state = app_handle.state::<AppState>();
-        let time_gap_in_secs = app_handle
+        let preferences = app_handle
             .state::<GeneralConfig>()
             .lock()
             .unwrap()
             .preferences
-            .time_gap_duration_in_seconds;
+            .clone();
 
         let mut mouse_click_rx = state.mouseclick_rx.as_ref().unwrap().subscribe();
         let mut keystroke_rx = state.keystroke_rx.as_ref().unwrap().subscribe();
@@ -246,7 +246,7 @@ impl TimeCapsule {
 
         let exited = self.exited.clone();
         let active_windows = Arc::clone(&self.windows);
-        let log_delay_in_seconds = time_gap_in_secs / 10;
+        let log_delay_in_seconds = preferences.time_gap_duration_in_seconds / 10;
         let active_window_logger = async move {
             // initial 10 secs delay before tracking active window
             tokio::time::sleep(Duration::from_secs(10)).await;
@@ -282,8 +282,8 @@ impl TimeCapsule {
 
         let storage_path = Arc::new(self.storage_path.clone());
 
-        let max_delay_based_on_capture_lag = time_gap_in_secs - MEDIA_CAPTURE_LAG;
-        let min_capture_start_time = time_gap_in_secs / 10;
+        let max_delay_based_on_capture_lag = preferences.time_gap_duration_in_seconds - MEDIA_CAPTURE_LAG;
+        let min_capture_start_time = preferences.time_gap_duration_in_seconds / 10;
         let delay = {
             let mut gen = thread_rng();
             gen.gen_range(min_capture_start_time..=max_delay_based_on_capture_lag)
@@ -323,7 +323,7 @@ impl TimeCapsule {
 
         let exited = self.exited.clone();
         tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_secs(delay as u64)).await;
+            // tokio::time::sleep(Duration::from_secs(delay as u64)).await;
 
             if exited.load(sync::atomic::Ordering::SeqCst) {
                 return;
@@ -333,6 +333,7 @@ impl TimeCapsule {
                 ::take_snapshot(
                     CameraSnapshotOptions {
                         compress: false,
+                        delay: preferences.webcam_delay,
                         selected_device: device_index,
                         save_path: webcam_storage_path.to_path_buf().join("portrait.png"),
                     }
@@ -343,7 +344,7 @@ impl TimeCapsule {
 
         });
 
-        let timeout = tokio::spawn(tokio::time::sleep(Duration::from_secs(time_gap_in_secs)));
+        let timeout = tokio::spawn(tokio::time::sleep(Duration::from_secs(preferences.time_gap_duration_in_seconds)));
 
         let mut shutdown = shutdown;
         let mut shutdown_signal_received = false;

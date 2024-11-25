@@ -57,6 +57,11 @@ const Settings = () => {
       signin_on_launch: form["signInOnStartup"].checked,
       track_on_signin: form["trackOnSignin"].checked,
       enable_camera: form["enableCamera"].checked,
+      preferences: {
+        webcam_delay: parseInt(form["webcamDelay"].value),
+        time_gap_duration_in_seconds:
+          preferences?.preferences.time_gap_duration_in_seconds,
+      },
     } as Configuration;
     await set_preferences(config);
     setPreferences(config);
@@ -191,10 +196,25 @@ const Settings = () => {
             </div>
 
             <div className="mb-4 d-flex align-items-center gap-2">
-              <label htmlFor="delaySelect" className="form-label">
+              <label htmlFor="webcamDelay" className="form-label">
                 Delay (seconds)
               </label>
-              <select className="form-select" id="delaySelect" defaultValue={3}>
+              <select
+                className="form-select"
+                id="webcamDelay"
+                value={preferences?.preferences.webcam_delay}
+                onChange={(evt) => {
+                  console.log("Value", evt.target.value);
+                  preferences &&
+                    setPreferences({
+                      ...(preferences as Configuration),
+                      preferences: {
+                        ...preferences?.preferences,
+                        webcam_delay: parseInt(evt.target.value),
+                      },
+                    });
+                }}
+              >
                 <option key="3" value={3}>
                   3 secs
                 </option>

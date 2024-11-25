@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use base64::Engine;
 // use dcv_color_primitives::convert_image;
@@ -74,7 +75,8 @@ pub struct CameraSnapshotOptions {
     pub save_path: PathBuf,
     // pub id: String,
     pub selected_device: String,
-    pub compress: bool
+    pub compress: bool,
+    pub delay: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -89,6 +91,8 @@ impl CameraController {
         }
 
         let save_path = options.save_path.clone();
+
+        let _ = tokio::spawn(tokio::time::sleep(Duration::from_secs(5))).await;
 
         #[cfg(target_os = "macos")]
         {
@@ -189,7 +193,6 @@ impl CameraController {
         }
 
         let data = fs::read(options.save_path).await.map_err(|err| err.to_string())?;
-        println!("I'm here");
         let result = base64::engine::general_purpose::STANDARD.encode(&data);
         Ok(result)
     }

@@ -45,12 +45,14 @@ impl Default for Configuration {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Preferences {
     pub time_gap_duration_in_seconds: u64,
+    pub webcam_delay: u64,
 }
 
 impl Default for Preferences {
     fn default() -> Self {
         Self {
             time_gap_duration_in_seconds: 60,
+            webcam_delay: 3,
         }
     }
 }

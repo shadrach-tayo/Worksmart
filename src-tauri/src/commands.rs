@@ -231,6 +231,7 @@ pub fn set_preferences(
     general_config: State<'_, GeneralConfig>,
     preferences: Configuration,
 ) -> Result<(), String> {
+     dbg!(&preferences);
     *general_config.lock().unwrap() = preferences;
 
     storage::save(&general_config.lock().unwrap().clone());
@@ -241,7 +242,7 @@ pub fn set_preferences(
 #[tauri::command]
 pub fn get_preferences(general_config: State<'_, GeneralConfig>) -> Result<Configuration, String> {
     let config = general_config.lock().unwrap().clone();
-
+    dbg!(&config);
     Ok(config)
 }
 
@@ -282,6 +283,7 @@ pub async fn webcam_capture(
     let img_data = CameraController::
             take_snapshot(
                 crate::CameraSnapshotOptions {
+                    delay: config.preferences.webcam_delay,
                     save_path: file_path,
                     compress: false,
                     selected_device: device.human_name() }

@@ -21,6 +21,7 @@ export interface Configuration {
 
 export interface Preferences {
   time_gap_duration_in_seconds: number;
+  webcam_delay: number;
 }
 
 export interface PermisssionsStatus {
