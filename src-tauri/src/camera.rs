@@ -2,10 +2,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use base64::Engine;
-// use dcv_color_primitives::convert_image;
-// use gst::prelude::*;
 use image::{ImageBuffer, Rgb};
-// use nokhwa::pixel_format::RgbFormat;
 use nokhwa::utils::{CameraInfo, RequestedFormat, RequestedFormatType, Resolution};
 use nokhwa::Camera;
 use nokhwa::{native_api_backend, pixel_format, NokhwaError};
@@ -21,7 +18,6 @@ pub fn get_default_camera() -> crate::Result<CameraInfo> {
 
     let devices =
         nokhwa::query(backend).map_err(|err| format!("nokhwa::query(backend) error: {:?}", err))?;
-    // devices.retain(|camera| camera.human_name() == name.as_str());
     #[allow(clippy::get_first)]
     Ok(devices.get(0).unwrap().to_owned())
 }
