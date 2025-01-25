@@ -16,8 +16,6 @@ use tokio::fs;
 
 use crate::compressor;
 
-// use tauri::api::process::{Command, CommandEvent, TerminatedPayload};
-
 pub fn get_default_camera() -> crate::Result<CameraInfo> {
     let backend = native_api_backend().unwrap();
 
@@ -29,10 +27,8 @@ pub fn get_default_camera() -> crate::Result<CameraInfo> {
 }
 
 pub fn create_camera(info: &CameraInfo) -> Result<Camera, NokhwaError> {
-    // let f_format = FrameFormat::YUYV;
     let frame_rate = 30;
     let resolution = Resolution::new(1920, 1080);
-    // let camera_format = CameraFormat::new(resolution, f_format, fps);
 
     let requested = RequestedFormat::new::<pixel_format::RgbFormat>(
         RequestedFormatType::ClosestIgnoringFormat {
@@ -105,20 +101,6 @@ impl CameraController {
                 .args(vec!["-i", &options.selected_device])
                 .args(vec!["-vf", "scale=720:-1,setdar=16/9"])
                 .args(vec!["-vframes", "1", save_path.to_str().unwrap()]);
-
-            // let args = cmd
-            //     .get_args()
-            //     .filter_map(|s| {
-            //         s.to_str().map(|s| {
-            //             if s.starts_with('-') {
-            //                 format!("\\\n  {s}")
-            //             } else {
-            //                 s.to_owned()
-            //             }
-            //         })
-            //     })
-            //     .collect::<Vec<_>>();
-            // println!("Args: {:?} {:?}", relative_command_path("ffmpeg"), args);
 
             let mut child = cmd
                 .spawn()
