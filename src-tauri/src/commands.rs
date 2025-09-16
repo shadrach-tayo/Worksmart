@@ -4,7 +4,6 @@ use chrono::Utc;
 use core_graphics::access::ScreenCaptureAccess;
 
 use dcv_color_primitives::convert_image;
-// use gst::prelude::*;
 use image::{ImageBuffer, ImageReader, Rgb, RgbImage};
 use nokhwa::pixel_format::RgbFormat;
 use nokhwa::utils::{
@@ -37,7 +36,6 @@ use yuv::convert::ToRGB;
 
 use crate::session::SessionControllerState;
 use crate::time_map::{TimeTrackerMap, TrackHistory};
-// use crate::encoder::uyvy422_frame;
 use crate::{path_exists, storage, windows, AppWindow, Auth, AuthConfig, CameraController, Configuration, PermisssionsStatus, SelectedDevice};
 
 use crate::{
